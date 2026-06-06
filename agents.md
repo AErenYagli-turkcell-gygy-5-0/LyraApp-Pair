@@ -1,5 +1,5 @@
-## LyraApp - Online/Offline Müzik Çalar Uygulaması
-### Bu repository LyraApp adında bir müzik çalar uygulamasının kaynak kodlarını içermektedir. Bu agents.md dosyası bu projede çalışan insan/ai herkesin uyması ZORUNDA olduğu genel kuralları içerir.
+# LyraApp - Online/Offline Müzik Çalar Uygulaması
+> Bu repository LyraApp adında bir müzik çalar uygulamasının kaynak kodlarını içermektedir. Bu agents.md dosyası bu projede çalışan insan/ai herkesin uyması ZORUNDA olduğu genel kuralları içerir.
 ---
 
 ## 1) TEKNOLOJİ YIĞINI

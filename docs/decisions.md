@@ -1,6 +1,6 @@
-## decisions.md
+# decisions.md
 
-Projede verilen bütün mimarisel-teknik kararları ve karar geçmişini içeren dökümantasyondur.
+> Projede verilen bütün mimarisel-teknik kararları ve karar geçmişini içeren dökümantasyondur.
 
 ---
 
