@@ -180,6 +180,73 @@ object LyraIcons {
                 "-8,4v3h16v-3c0,-2.66 -5.33,-4 -8,-4z",
         )
     }
+
+    /** Kütüphane başlığı ekle butonu (Material Add). */
+    val Add: ImageVector by lazy {
+        lyraIcon(
+            name = "Add",
+            pathData = "M19,13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z",
+        )
+    }
+
+    // ── Profil ekranı ikonları ──
+
+    /** Profil başlığı ayarlar dişlisi (Material Settings). */
+    val Settings: ImageVector by lazy {
+        lyraIcon(
+            name = "Settings",
+            pathData = "M19.14,12.94c0.04,-0.3 0.06,-0.61 0.06,-0.94c0,-0.32 -0.02,-0.64 -0.07,-0.94l2.03,-1.58" +
+                "c0.18,-0.14 0.23,-0.41 0.12,-0.61l-1.92,-3.32c-0.12,-0.22 -0.37,-0.29 -0.59,-0.22l-2.39,0.96" +
+                "c-0.5,-0.38 -1.03,-0.7 -1.62,-0.94L14.4,2.81c-0.04,-0.24 -0.24,-0.41 -0.48,-0.41h-3.84" +
+                "c-0.24,0 -0.43,0.17 -0.47,0.41L9.25,5.35C8.66,5.59 8.12,5.92 7.63,6.29L5.24,5.33" +
+                "c-0.22,-0.08 -0.47,0 -0.59,0.22L2.74,8.87C2.62,9.08 2.66,9.34 2.86,9.48l2.03,1.58" +
+                "C4.84,11.36 4.8,11.69 4.8,12s0.02,0.64 0.07,0.94l-2.03,1.58c-0.18,0.14 -0.23,0.41 -0.12,0.61" +
+                "l1.92,3.32c0.12,0.22 0.37,0.29 0.59,0.22l2.39,-0.96c0.5,0.38 1.03,0.7 1.62,0.94l0.36,2.54" +
+                "c0.05,0.24 0.24,0.41 0.48,0.41h3.84c0.24,0 0.44,-0.17 0.47,-0.41l0.36,-2.54" +
+                "c0.59,-0.24 1.13,-0.56 1.62,-0.94l2.39,0.96c0.22,0.08 0.47,0 0.59,-0.22l1.92,-3.32" +
+                "c0.12,-0.22 0.07,-0.47 -0.12,-0.61L19.14,12.94z" +
+                "M12,15.6c-1.98,0 -3.6,-1.62 -3.6,-3.6s1.62,-3.6 3.6,-3.6 3.6,1.62 3.6,3.6 -1.62,3.6 -3.6,3.6z",
+        )
+    }
+
+    /** Koyu tema segment seçeneği (Material Brightness2 — hilal ay). */
+    val Moon: ImageVector by lazy {
+        lyraIcon(
+            name = "Moon",
+            pathData = "M10,2c-1.82,0 -3.53,0.5 -5,1.35C7.99,5.08 10,8.3 10,12s-2.01,6.92 -5,8.65" +
+                "C6.47,21.5 8.18,22 10,22c5.52,0 10,-4.48 10,-10S15.52,2 10,2z",
+        )
+    }
+
+    /** Bildirimler ayar satırı (Material Notifications). */
+    val Bell: ImageVector by lazy {
+        lyraIcon(
+            name = "Bell",
+            pathData = "M12,22c1.1,0 2,-0.9 2,-2h-4c0,1.1 0.9,2 2,2z" +
+                "M18,16v-5c0,-3.07 -1.64,-5.64 -4.5,-6.32V4c0,-0.83 -0.67,-1.5 -1.5,-1.5s-1.5,0.67 -1.5,1.5v0.68" +
+                "C7.63,5.36 6,7.92 6,11v5l-2,2v1h16v-1l-2,-2z",
+        )
+    }
+
+    /** Yardım ve destek ayar satırı (Material HelpOutline). */
+    val HelpCircle: ImageVector by lazy {
+        lyraIcon(
+            name = "HelpCircle",
+            pathData = "M11,18h2v-2h-2v2z" +
+                "M12,2C6.48,2 2,6.48 2,12s4.48,10 10,10 10,-4.48 10,-10S17.52,2 12,2z" +
+                "M12,20c-4.41,0 -8,-3.59 -8,-8s3.59,-8 8,-8 8,3.59 8,8 -3.59,8 -8,8z" +
+                "M12,6c-2.21,0 -4,1.79 -4,4h2c0,-1.1 0.9,-2 2,-2s2,0.9 2,2c0,2 -3,1.75 -3,5h2" +
+                "c0,-2.25 3,-2.5 3,-5 0,-2.21 -1.79,-4 -4,-4z",
+        )
+    }
+
+    /** Çevrimdışı indirme ayar satırı ve şarkı listesi indirme butonu (Material FileDownload). */
+    val Download: ImageVector by lazy {
+        lyraIcon(
+            name = "Download",
+            pathData = "M19,9h-4V3H9v6H5l7,7 7,-7zM5,18v2h14v-2H5z",
+        )
+    }
 }
 
 /**

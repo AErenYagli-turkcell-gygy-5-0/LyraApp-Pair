@@ -95,3 +95,72 @@
 
 - Sebep: Backend REST API sözleşmesi tanımlı değil (`agents.md` §2.2 uydurmak yasak). Gerçek API
   geldiğinde yalnızca implementasyon ve DI bağlaması değişir; ViewModel/Contract etkilenmez.
+
+
+### Arama Ekranı Veri Katmanı
+
+- Karar: `data/search/SearchRepository` + `MockSearchRepository`. Tür listesi 8 öğe; gradyan renk
+  çifti ile CDN URL yer tutucusu yapısı `data/home/HomeModels.kt` ile tutarlıdır.
+
+- Son Güncelleme Tarihi: 13.06.2026
+
+- Sebep: Arama sorgusu bu iterasyonda yalnızca yerel state'te tutulur (backend yok); ağ araması
+  ileriki iterasyona bırakılır.
+
+
+### Kütüphane Ekranı Veri Katmanı
+
+- Karar: `data/library/LibraryRepository` + `MockLibraryRepository`. `LibraryPlaylist.isLikedSongs`
+  bayrağı özel kapak renderlama (kalp ikonu + pembe gradient) için gereklidir; ayrı model yaratmak
+  yerine flag tercih edildi çünkü tüm alanlar ortaktır.
+
+- Son Güncelleme Tarihi: 13.06.2026
+
+- Sebep: Sanatçılar ve Albümler sekmeleri bu iterasyonda backend gerektirmez; tab seçimi yalnızca
+  yerel state değişikliği olarak uygulanır.
+
+
+### Beğenilen Şarkılar Ekranı — Favoriler Sekmesi Olarak
+
+- Karar: `LyraDestination.Favorites` rotası `LikedSongsRoute(onBack = {})` composable'ını render eder.
+  Kütüphane'den "Beğenilen Şarkılar" tıklaması `LibraryEffect.NavigateToLikedSongs` üretir; NavHost
+  bunu tüketerek `navigateToTab(Favorites)` çağırır.
+
+- Son Güncelleme Tarihi: 13.06.2026
+
+- Sebep: Tasarım, Favoriler sekmesi seçiliyken alt gezinme çubuğunun görünür olmasını ve Beğenilen
+  Şarkılar içeriğinin gösterilmesini gerektiriyor. Ayrı `LikedSongs` rotası eklenmesi gereksiz bir
+  back stack katmanı yaratırdı; `Favorites = LikedSongs` bağlamında tek doğruluk kaynağı korunur.
+
+  `onBack = {}` no-op: Favoriler üst düzey sekmede geri navigasyona gerek yoktur. İleride detay
+  ekranına taşınırsa bu bağlama özel bir `LikedSongs("liked_songs")` rotası eklenebilir.
+
+
+### Tema Tercihi Kalıcı Saklama
+
+- Karar: **DataStore Preferences** (`androidx.datastore:datastore-preferences:1.1.7`).
+  `DataStoreThemeRepository` → `ThemePreferenceRepository` (Singleton) → `isDarkTheme: Flow<Boolean>`.
+
+- Son Güncelleme Tarihi: 13.06.2026
+
+- Uygulama: `MainActivity` DataStore Flow'unu `@Inject` + `collectAsStateWithLifecycle(initialValue = false)`
+  ile toplar ve `LyraAppTheme(darkTheme = isDark)` çağırır. `ProfileViewModel` aynı Singleton'dan
+  okur, `ProfileIntent.ThemeChanged` geldiğinde `setTheme()` yazar; Flow yayılmasıyla her iki
+  tüketici de anında güncellenir.
+
+- Sebep: SharedPreferences yerine DataStore seçildi; SharedPreferences bloklu IO, thread-unsafe ve
+  Flow desteği yoktur. DataStore coroutine-native, Flow tabanlı ve null-safe'dir. `ViewModel`'de
+  DataStore Session tutmak yerine Activity katmanında toplanmasının nedeni: tema uygulama geneli bir
+  shell kararı olup UI katmanlarının ötesinde Activity lifecycle'a bağlıdır.
+
+
+### Profil Ekranı Veri Katmanı
+
+- Karar: `data/profile/ProfileRepository` + `MockProfileRepository`. `SettingItem.id` string anahtar
+  ile ayar ikonu `ProfileScreen` içindeki `settingIconFor()` fonksiyonu tarafından çözülür; ikon
+  bilgisi veri katmanına taşınmaz (UI kararı).
+
+- Son Güncelleme Tarihi: 13.06.2026
+
+- Sebep: Ayar navigasyonu bu iterasyonda kapsam dışı; `SettingClicked` Intent kaydedilmiş ancak
+  Effect üretmiyor. Gerçek API geldiğinde navigasyon hedefleri Intent dallarına eklenir.

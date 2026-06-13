@@ -1,15 +1,12 @@
 package com.turkcell.lyraapp.ui.navigation
 
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -19,6 +16,10 @@ import androidx.navigation.compose.rememberNavController
 import com.turkcell.lyraapp.ui.auth.login.LoginRoute
 import com.turkcell.lyraapp.ui.auth.register.RegisterRoute
 import com.turkcell.lyraapp.ui.home.HomeRoute
+import com.turkcell.lyraapp.ui.library.LibraryRoute
+import com.turkcell.lyraapp.ui.likedsongs.LikedSongsRoute
+import com.turkcell.lyraapp.ui.profile.ProfileRoute
+import com.turkcell.lyraapp.ui.search.SearchRoute
 
 /**
  * Uygulamanın iskelet navigasyon yapısı.
@@ -86,10 +87,18 @@ fun LyraNavHost(
             }
 
             composable(LyraDestination.Home.route) { HomeRoute() }
-            composable(LyraDestination.Search.route) { PlaceholderScreen(title = "Ara") }
-            composable(LyraDestination.Library.route) { PlaceholderScreen(title = "Kütüphane") }
-            composable(LyraDestination.Favorites.route) { PlaceholderScreen(title = "Favoriler") }
-            composable(LyraDestination.Profile.route) { PlaceholderScreen(title = "Profil") }
+            composable(LyraDestination.Search.route) { SearchRoute() }
+            composable(LyraDestination.Library.route) {
+                LibraryRoute(
+                    onNavigateToLikedSongs = {
+                        navController.navigateToTab(LyraDestination.Favorites)
+                    },
+                )
+            }
+            composable(LyraDestination.Favorites.route) {
+                LikedSongsRoute(onBack = {})
+            }
+            composable(LyraDestination.Profile.route) { ProfileRoute() }
         }
     }
 }
@@ -115,24 +124,3 @@ private fun NavHostController.navigateToHomeClearingAuth() {
     }
 }
 
-/**
- * Geçici sekme içeriği. Sekme ekranları henüz kapsamda değildir; her biri kendi
- * feature paketinde MVI sözleşmesiyle (Contract + ViewModel + Route/Screen) yazıldığında
- * bu composable kaldırılacak ve rotalar gerçek Route'lara bağlanacaktır.
- */
-@Composable
-private fun PlaceholderScreen(
-    title: String,
-    modifier: Modifier = Modifier,
-) {
-    Box(
-        modifier = modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.headlineSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-    }
-}
