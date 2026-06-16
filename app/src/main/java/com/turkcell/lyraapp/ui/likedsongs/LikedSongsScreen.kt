@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -56,6 +55,7 @@ import com.turkcell.lyraapp.ui.theme.LyraAppTheme
 @Composable
 fun LikedSongsRoute(
     onBack: () -> Unit,
+    onNavigateToNowPlaying: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: LikedSongsViewModel = hiltViewModel(),
 ) {
@@ -65,6 +65,7 @@ fun LikedSongsRoute(
         viewModel.effect.collect { effect ->
             when (effect) {
                 is LikedSongsEffect.NavigateBack -> onBack()
+                is LikedSongsEffect.NavigateToNowPlaying -> onNavigateToNowPlaying()
             }
         }
     }
@@ -104,8 +105,7 @@ fun LikedSongsScreen(
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(innerPadding)
-                    .statusBarsPadding(),
+                    .padding(innerPadding),
                 contentPadding = PaddingValues(bottom = 16.dp),
             ) {
                 item {

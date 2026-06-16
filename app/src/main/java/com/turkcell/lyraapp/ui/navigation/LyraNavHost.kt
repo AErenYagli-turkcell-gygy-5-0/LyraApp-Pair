@@ -1,41 +1,38 @@
 package com.turkcell.lyraapp.ui.navigation
 
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.turkcell.lyraapp.ui.auth.login.LoginRoute
 import com.turkcell.lyraapp.ui.auth.register.RegisterRoute
+import com.turkcell.lyraapp.ui.createplaylist.CreatePlaylistRoute
 import com.turkcell.lyraapp.ui.home.HomeRoute
 import com.turkcell.lyraapp.ui.library.LibraryRoute
 import com.turkcell.lyraapp.ui.likedsongs.LikedSongsRoute
+import com.turkcell.lyraapp.ui.nowplaying.NowPlayingRoute
+import com.turkcell.lyraapp.ui.player.MiniPlayer
+import com.turkcell.lyraapp.ui.player.PlayerEffect
+import com.turkcell.lyraapp.ui.player.PlayerViewModel
+import com.turkcell.lyraapp.ui.playlistdetail.PlaylistDetailRoute
 import com.turkcell.lyraapp.ui.profile.ProfileRoute
 import com.turkcell.lyraapp.ui.search.SearchRoute
 
-/**
- * Uygulamanın iskelet navigasyon yapısı.
- *
- * Tek [NavHost], Auth grafiği ile ana akış sekmelerini barındırır; başlangıç hedefi
- * [LyraDestination.Login]'dir. Dış [Scaffold]'ın `bottomBar` yuvasındaki [LyraBottomBar]
- * yalnızca üst düzey sekme rotalarında görünür; böylece çubuk her ana sayfanın altında
- * yer alır, Auth ekranlarında gizlenir.
- *
- * Her ekranın `Route` composable'ı, MVI Effect'lerini buradan sağlanan navigasyon
- * lambda'larına köprüler (ViewModel navigasyon API'si bilmez; bkz. mvi-viewmodel-rules §6).
- *
- * Dış Scaffold'ın `contentWindowInsets`'i sıfırlanır: sistem çubuğu boşluklarını her ekran
- * kendisi yönetir (Login/Register'da olduğu gibi); içerik dolgusu yalnızca alt çubuğun
- * yüksekliğini taşır.
- */
 @Composable
 fun LyraNavHost(
     modifier: Modifier = Modifier,
@@ -44,16 +41,36 @@ fun LyraNavHost(
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
 
+    val playerViewModel: PlayerViewModel = hiltViewModel()
+    val playerUiState by playerViewModel.uiState.collectAsStateWithLifecycle()
+
+    LaunchedEffect(Unit) {
+        playerViewModel.effect.collect { effect ->
+            when (effect) {
+                is PlayerEffect.OpenNowPlaying ->
+                    navController.navigate(LyraDestination.NowPlaying.route)
+            }
+        }
+    }
+
     Scaffold(
         modifier = modifier,
         containerColor = MaterialTheme.colorScheme.background,
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         bottomBar = {
             if (isTopLevelRoute(currentRoute)) {
-                LyraBottomBar(
-                    currentRoute = currentRoute,
-                    onTabSelected = navController::navigateToTab,
-                )
+                Column {
+                    if (playerUiState.currentSong != null) {
+                        MiniPlayer(
+                            state = playerUiState,
+                            onIntent = playerViewModel::onIntent,
+                        )
+                    }
+                    LyraBottomBar(
+                        currentRoute = currentRoute,
+                        onTabSelected = navController::navigateToTab,
+                    )
+                }
             }
         },
     ) { innerPadding ->
@@ -93,21 +110,51 @@ fun LyraNavHost(
                     onNavigateToLikedSongs = {
                         navController.navigateToTab(LyraDestination.Favorites)
                     },
+                    onNavigateToPlaylistDetail = { playlistId ->
+                        navController.navigate(playlistDetailRoute(playlistId))
+                    },
+                    onNavigateToCreatePlaylist = {
+                        navController.navigate(LyraDestination.CreatePlaylist.route)
+                    },
                 )
             }
             composable(LyraDestination.Favorites.route) {
-                LikedSongsRoute(onBack = {})
+                LikedSongsRoute(
+                    onBack = {},
+                    onNavigateToNowPlaying = {
+                        navController.navigate(LyraDestination.NowPlaying.route)
+                    },
+                )
             }
             composable(LyraDestination.Profile.route) { ProfileRoute() }
+
+            composable(
+                route = "${LyraDestination.PlaylistDetail.route}/{playlistId}",
+                arguments = listOf(navArgument("playlistId") { type = NavType.StringType }),
+            ) {
+                PlaylistDetailRoute(
+                    onNavigateBack = { navController.popBackStack() },
+                    onNavigateToNowPlaying = {
+                        navController.navigate(LyraDestination.NowPlaying.route)
+                    },
+                )
+            }
+
+            composable(LyraDestination.NowPlaying.route) {
+                NowPlayingRoute(
+                    onCollapse = { navController.popBackStack() },
+                )
+            }
+
+            composable(LyraDestination.CreatePlaylist.route) {
+                CreatePlaylistRoute(
+                    onDismiss = { navController.popBackStack() },
+                )
+            }
         }
     }
 }
 
-/**
- * Alt çubuk sekmesine standart desenle geçiş yapar: back stack'te sekme kopyası birikmez
- * (`launchSingleTop`), sekmeler arası geçişte durum saklanır/geri yüklenir
- * (`saveState`/`restoreState`) ve geri tuşu daima Home'a döner (`popUpTo(Home)`).
- */
 private fun NavHostController.navigateToTab(destination: LyraDestination) {
     navigate(destination.route) {
         popUpTo(LyraDestination.Home.route) { saveState = true }
@@ -116,11 +163,9 @@ private fun NavHostController.navigateToTab(destination: LyraDestination) {
     }
 }
 
-/** Auth akışını back stack'ten temizleyerek Home'a geçer (geri tuşu Login'e dönmez). */
 private fun NavHostController.navigateToHomeClearingAuth() {
     navigate(LyraDestination.Home.route) {
         popUpTo(LyraDestination.Login.route) { inclusive = true }
         launchSingleTop = true
     }
 }
-

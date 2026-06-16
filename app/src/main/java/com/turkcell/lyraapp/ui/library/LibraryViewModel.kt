@@ -41,6 +41,10 @@ class LibraryViewModel @Inject constructor(
                 _uiState.update { it.copy(selectedTab = intent.tab) }
             is LibraryIntent.OpenLikedSongs ->
                 viewModelScope.launch { _effect.send(LibraryEffect.NavigateToLikedSongs) }
+            is LibraryIntent.PlaylistClicked ->
+                viewModelScope.launch { _effect.send(LibraryEffect.NavigateToPlaylistDetail(intent.playlistId)) }
+            is LibraryIntent.CreatePlaylistClicked ->
+                viewModelScope.launch { _effect.send(LibraryEffect.NavigateToCreatePlaylist) }
         }
     }
 

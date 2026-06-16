@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -53,6 +52,8 @@ import com.turkcell.lyraapp.ui.theme.LyraAppTheme
 @Composable
 fun LibraryRoute(
     onNavigateToLikedSongs: () -> Unit,
+    onNavigateToPlaylistDetail: (playlistId: String) -> Unit,
+    onNavigateToCreatePlaylist: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: LibraryViewModel = hiltViewModel(),
 ) {
@@ -63,6 +64,8 @@ fun LibraryRoute(
         viewModel.effect.collect { effect ->
             when (effect) {
                 is LibraryEffect.NavigateToLikedSongs -> onNavigateToLikedSongs()
+                is LibraryEffect.NavigateToPlaylistDetail -> onNavigateToPlaylistDetail(effect.playlistId)
+                is LibraryEffect.NavigateToCreatePlaylist -> onNavigateToCreatePlaylist()
                 is LibraryEffect.ShowError -> snackbarHostState.showSnackbar(effect.message)
             }
         }
@@ -96,10 +99,9 @@ fun LibraryScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding)
-                .statusBarsPadding(),
+                .padding(innerPadding),
         ) {
-            LibraryHeader()
+            LibraryHeader(onAddClick = { onIntent(LibraryIntent.CreatePlaylistClicked) })
             Spacer(Modifier.height(16.dp))
             LibraryTabRow(
                 selected = state.selectedTab,
@@ -124,7 +126,10 @@ fun LibraryScreen(
                         PlaylistRow(
                             playlist = playlist,
                             onClick = {
-                                if (playlist.isLikedSongs) onIntent(LibraryIntent.OpenLikedSongs)
+                                when {
+                                    playlist.isLikedSongs -> onIntent(LibraryIntent.OpenLikedSongs)
+                                    else -> onIntent(LibraryIntent.PlaylistClicked(playlist.id))
+                                }
                             },
                         )
                     }
@@ -135,7 +140,7 @@ fun LibraryScreen(
 }
 
 @Composable
-private fun LibraryHeader() {
+private fun LibraryHeader(onAddClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -160,7 +165,9 @@ private fun LibraryHeader() {
             imageVector = LyraIcons.Add,
             contentDescription = "Ekle",
             tint = MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.size(24.dp),
+            modifier = Modifier
+                .size(24.dp)
+                .clickable(onClick = onAddClick),
         )
     }
 }

@@ -2,7 +2,10 @@ package com.turkcell.lyraapp.ui.likedsongs
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.turkcell.lyraapp.data.likedsongs.LikedSong
 import com.turkcell.lyraapp.data.likedsongs.LikedSongsRepository
+import com.turkcell.lyraapp.data.playback.PlaybackRepository
+import com.turkcell.lyraapp.data.playback.Song
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
@@ -14,15 +17,10 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-/**
- * Beğenilen Şarkılar ekranının ViewModel'i (bkz. mvi-viewmodel-rules.md).
- *
- * Şarkılar ekran açılışında bir kez yüklenir. Şarkıya tıklama mevcut çalan öğeyi günceller;
- * geri tuşu [LikedSongsEffect.NavigateBack] üretir.
- */
 @HiltViewModel
 class LikedSongsViewModel @Inject constructor(
     private val likedSongsRepository: LikedSongsRepository,
+    private val playbackRepository: PlaybackRepository,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(LikedSongsUiState())
@@ -39,8 +37,16 @@ class LikedSongsViewModel @Inject constructor(
         when (intent) {
             is LikedSongsIntent.BackClicked ->
                 viewModelScope.launch { _effect.send(LikedSongsEffect.NavigateBack) }
-            is LikedSongsIntent.SongClicked ->
-                _uiState.update { it.copy(currentlyPlayingId = intent.songId) }
+            is LikedSongsIntent.SongClicked -> playSong(intent.songId)
+        }
+    }
+
+    private fun playSong(songId: String) {
+        val song = _uiState.value.songs.firstOrNull { it.id == songId } ?: return
+        _uiState.update { it.copy(currentlyPlayingId = songId) }
+        viewModelScope.launch {
+            playbackRepository.playSong(song.toSong())
+            _effect.send(LikedSongsEffect.NavigateToNowPlaying)
         }
     }
 
@@ -62,13 +68,18 @@ class LikedSongsViewModel @Inject constructor(
                         )
                     }
                 }
-                .onFailure { error ->
-                    _effect.send(
-                        LikedSongsEffect.NavigateBack.also {
-                            // Yükleme başarısız olursa geri dönülür; hata kaydedilebilir.
-                        }
-                    )
+                .onFailure {
+                    _effect.send(LikedSongsEffect.NavigateBack)
                 }
         }
     }
+
+    private fun LikedSong.toSong() = Song(
+        id = id,
+        title = title,
+        artist = artist,
+        duration = duration,
+        artworkStartColor = artworkStartColor,
+        artworkEndColor = artworkEndColor,
+    )
 }

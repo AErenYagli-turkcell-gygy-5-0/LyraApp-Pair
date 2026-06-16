@@ -164,3 +164,55 @@
 
 - Sebep: Ayar navigasyonu bu iterasyonda kapsam dışı; `SettingClicked` Intent kaydedilmiş ancak
   Effect üretmiyor. Gerçek API geldiğinde navigasyon hedefleri Intent dallarına eklenir.
+
+
+### Paylaşılan Oynatma State'i (Shared Playback State)
+
+- Karar: `data/playback/PlaybackRepository` (Singleton) + `MockPlaybackRepository`. Repository
+  `StateFlow<PlaybackState>` expose eder; `NowPlayingViewModel` ve `PlayerViewModel` (mini player)
+  aynı Singleton instance'ı inject eder.
+
+- Son Güncelleme Tarihi: 16.06.2026
+
+- Uygulama: `ThemePreferenceRepository` Singleton pattern'i ile birebir aynı yaklaşım. `PlayerViewModel`
+  `LyraNavHost` seviyesinde `hiltViewModel()` ile oluşturulur ve Activity scope boyunca yaşar; böylece
+  tüm sekmelerde aynı instance kullanılır. `NowPlayingViewModel` ise kendi back stack entry'sine bağlıdır
+  ancak aynı Singleton repository'den okur — iki ViewModel hiçbir zaman birbiriyle doğrudan haberleşmez.
+
+- Sebep: `agents.md §2.2` gereği uydurma yasak; tek doğruluk kaynağı repository katmanında tutulur.
+  ViewModel'lar arası doğrudan iletişim MVI sözleşmesini bozar.
+
+
+### Mini Player Entegrasyonu
+
+- Karar: `MiniPlayer` composable'ı `LyraNavHost` içindeki dış `Scaffold.bottomBar` bloğuna, `LyraBottomBar`'ın
+  hemen üstüne yerleştirilir. `playerUiState.currentSong != null` koşuluna göre görünür/gizli olur;
+  gizlendiğinde yer kaplamaz.
+
+- Son Güncelleme Tarihi: 16.06.2026
+
+- Uygulama: `bottomBar` içinde `Column { MiniPlayer(...); LyraBottomBar(...) }`. Mini player'a
+  tıklanması `PlayerIntent.ExpandClicked` üretir; `PlayerEffect.OpenNowPlaying` NavHost'ta `LaunchedEffect`
+  ile tüketilerek `NowPlaying` rotasına navigate edilir. Collapse (NowPlaying'deki aşağı ok) `popBackStack()`
+  çağırır — mini player otomatik olarak yeniden görünür.
+
+- Sebep: Mini player bir chrome bileşeni olup feature ekranı değildir; kendi MVI State/Intent/Effect
+  sözleşmesi `PlayerContract.kt`'de tanımlıdır ancak bottom bar ile aynı layout katmanında yönetilir.
+
+
+### Yeni Ekranlar ve Rota Argumentleri
+
+- Karar: `PlaylistDetail`, `NowPlaying`, `CreatePlaylist` rotaları `LyraDestination` enum'una eklendi.
+  `PlaylistDetail` rotası `{playlistId}` path argument taşır; `NowPlaying` taşımaz (state PlaybackRepository'dedir).
+
+- Son Güncelleme Tarihi: 16.06.2026
+
+- Uygulama:
+  - `"playlistdetail/{playlistId}"` → `navArgument("playlistId") { type = NavType.StringType }` →
+    `PlaylistDetailViewModel.savedStateHandle["playlistId"]`.
+  - `"nowplaying"` → PlaybackRepository'de şarkı zaten set edilmiş olur (navigate öncesi `playSong()` çağrılır).
+  - `"createplaylist"` → Modal tam ekran, `popBackStack()` ile kapatılır.
+  - Yardımcı fonksiyon: `fun playlistDetailRoute(playlistId: String) = "playlistdetail/$playlistId"`.
+
+- Sebep: NowPlaying için argument gereksizdir çünkü PlaybackRepository Singleton'ı navigasyondan önce
+  güncellenir; deep link gereksinimi bu iterasyonda kapsam dışıdır.

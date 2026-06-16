@@ -23,4 +23,5 @@ sealed interface LikedSongsIntent {
 
 sealed interface LikedSongsEffect {
     data object NavigateBack : LikedSongsEffect
+    data object NavigateToNowPlaying : LikedSongsEffect
 }

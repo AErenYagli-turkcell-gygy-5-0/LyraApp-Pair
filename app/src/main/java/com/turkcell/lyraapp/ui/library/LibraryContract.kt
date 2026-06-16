@@ -20,9 +20,13 @@ enum class LibraryTab(val label: String) {
 sealed interface LibraryIntent {
     data class TabSelected(val tab: LibraryTab) : LibraryIntent
     data object OpenLikedSongs : LibraryIntent
+    data class PlaylistClicked(val playlistId: String) : LibraryIntent
+    data object CreatePlaylistClicked : LibraryIntent
 }
 
 sealed interface LibraryEffect {
     data object NavigateToLikedSongs : LibraryEffect
+    data class NavigateToPlaylistDetail(val playlistId: String) : LibraryEffect
+    data object NavigateToCreatePlaylist : LibraryEffect
     data class ShowError(val message: String) : LibraryEffect
 }
