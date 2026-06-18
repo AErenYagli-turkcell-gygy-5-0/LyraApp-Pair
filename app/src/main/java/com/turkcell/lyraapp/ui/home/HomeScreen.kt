@@ -1,5 +1,6 @@
 package com.turkcell.lyraapp.ui.home
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -57,6 +58,7 @@ import com.turkcell.lyraapp.ui.theme.LyraAppTheme
  */
 @Composable
 fun HomeRoute(
+    onNavigateToProfile: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
@@ -81,6 +83,7 @@ fun HomeRoute(
 
     HomeScreen(
         state = uiState,
+        onNavigateToProfile = onNavigateToProfile,
         onIntent = viewModel::onIntent,
         snackbarHostState = snackbarHostState,
         modifier = modifier,
@@ -98,6 +101,7 @@ fun HomeRoute(
 fun HomeScreen(
     state: HomeUiState,
     onIntent: (HomeIntent) -> Unit,
+    onNavigateToProfile: () -> Unit,
     modifier: Modifier = Modifier,
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
 ) {
@@ -122,7 +126,7 @@ fun HomeScreen(
                     .padding(innerPadding),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
-                item { HomeHeader(greeting = state.greeting, userInitials = state.userInitials) }
+                item { HomeHeader(greeting = state.greeting, userInitials = state.userInitials, onAvatarClick = onNavigateToProfile) }
                 item { QuickPickGrid(quickPicks = state.quickPicks) }
                 item { SectionHeader(title = "Son çalınanlar", trailingText = "Tümü") }
                 item { RecentlyPlayedRow(items = state.recentlyPlayed) }
@@ -138,6 +142,7 @@ fun HomeScreen(
 private fun HomeHeader(
     greeting: String,
     userInitials: String,
+    onAvatarClick: () -> Unit,
 ) {
     Row(
         modifier = Modifier
@@ -166,17 +171,18 @@ private fun HomeHeader(
             modifier = Modifier.size(24.dp),
         )
         Spacer(Modifier.width(16.dp))
-        UserAvatar(initials = userInitials)
+        UserAvatar(initials = userInitials, onClick = onAvatarClick)
     }
 }
 
 @Composable
-private fun UserAvatar(initials: String) {
+private fun UserAvatar(initials: String, onClick: () -> Unit) {
     Box(
         modifier = Modifier
             .size(40.dp)
             .clip(CircleShape)
-            .background(MaterialTheme.colorScheme.primaryContainer),
+            .background(MaterialTheme.colorScheme.primaryContainer)
+            .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
         Text(
@@ -187,7 +193,6 @@ private fun UserAvatar(initials: String) {
         )
     }
 }
-
 /** Hızlı seçimlerin 2 sütunlu sabit grid'i (6 öğe; dikey scroll LazyColumn'a aittir). */
 @Composable
 private fun QuickPickGrid(quickPicks: List<QuickPick>) {
@@ -387,7 +392,7 @@ private val previewState = HomeUiState(
 @Composable
 private fun HomeScreenDarkPreview() {
     LyraAppTheme(darkTheme = true) {
-        HomeScreen(state = previewState, onIntent = {})
+        HomeScreen(state = previewState, onIntent = {}, onNavigateToProfile = {})
     }
 }
 
@@ -395,6 +400,6 @@ private fun HomeScreenDarkPreview() {
 @Composable
 private fun HomeScreenLightPreview() {
     LyraAppTheme(darkTheme = false) {
-        HomeScreen(state = previewState, onIntent = {})
+        HomeScreen(state = previewState, onIntent = {}, onNavigateToProfile = {})
     }
 }

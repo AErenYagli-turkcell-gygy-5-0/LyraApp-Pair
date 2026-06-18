@@ -103,7 +103,12 @@ fun LyraNavHost(
                 )
             }
 
-            composable(LyraDestination.Home.route) { HomeRoute() }
+            composable(LyraDestination.Home.route) {
+                HomeRoute(
+                    onNavigateToProfile = { navController.navigateToTab(LyraDestination.Profile) },
+                )
+            }
+
             composable(LyraDestination.Search.route) { SearchRoute() }
             composable(LyraDestination.Library.route) {
                 LibraryRoute(
