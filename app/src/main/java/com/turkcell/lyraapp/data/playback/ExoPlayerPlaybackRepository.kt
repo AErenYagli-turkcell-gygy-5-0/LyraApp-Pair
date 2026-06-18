@@ -2,9 +2,9 @@ package com.turkcell.lyraapp.data.playback
 
 import android.content.Context
 import android.os.Looper
-import androidx.annotation.MainThread
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import com.turkcell.lyraapp.data.remote.SongApiService
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -23,6 +23,7 @@ import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
+@UnstableApi
 @Singleton
 class ExoPlayerPlaybackRepository @Inject constructor(
     @ApplicationContext private val context: Context,
@@ -45,13 +46,11 @@ class ExoPlayerPlaybackRepository @Inject constructor(
 
     init {
         player.addListener(object : Player.Listener {
-            @MainThread
             override fun onIsPlayingChanged(isPlaying: Boolean) {
                 _playbackState.update { it.copy(isPlaying = isPlaying) }
                 if (isPlaying) startProgressTicker() else stopProgressTicker()
             }
 
-            @MainThread
             override fun onPlaybackStateChanged(playbackState: Int) {
                 if (playbackState == Player.STATE_ENDED) {
                     scope.launch { handlePlaybackEnded() }
