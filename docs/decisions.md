@@ -220,6 +220,28 @@
   Kotlin null-safety'yi Gson'dan daha iyi yönetir; codegen gerektirmez.
 
 
+### Ses Oynatımı — ExoPlayer (Media3)
+
+- Karar: **androidx.media3:media3-exoplayer 1.5.1** — `MockPlaybackRepository` yerine `ExoPlayerPlaybackRepository`.
+
+- Son Güncelleme Tarihi: 18.06.2026
+
+- Uygulama: `ExoPlayerPlaybackRepository` (`data/playback/`) `PlaybackRepository` arayüzünü implement eder;
+  `PlaybackModule` bağlaması değiştirildi. `ExoPlayer` `Looper.getMainLooper()` ile oluşturulur (tüm
+  player çağrıları main thread üzerinde yapılır, `withContext(Dispatchers.Main)` ile sarmalanır).
+  Stream URL'i `GET /api/v1/songs/{id}/stream-url` endpoint'inden TTL=300s imzalı olarak alınır
+  (her `playSong` çağrısında taze URL mint edilir, önbelleğe alınmaz). İlerleme durumu 500ms
+  periyodik coroutine (`startProgressTicker`) ile `PlaybackState.progress` ve
+  `currentPositionLabel` olarak yayınlanır. Kuyruğun sonuna gelince sıradaki şarkıya geçilir;
+  repeat açıksa mevcut şarkı başa sarılır. `previous()` pozisyon > 3 saniye ise başa sarma,
+  ≤ 3 saniye ise önceki şarkıya geçme davranışı sergiler.
+
+- Bağımlılıklar: `media3-exoplayer:1.5.1`, `media3-common:1.5.1`.
+
+- Sebep: `agents.md §2.2` gereği uydurma yasak; gerçek ses oynatımı için platform standardı olan
+  Media3/ExoPlayer seçildi. Arayüz sabit kaldığından ViewModel ve UI katmanları etkilenmedi.
+
+
 ### Yeni Ekranlar ve Rota Argumentleri
 
 - Karar: `PlaylistDetail`, `NowPlaying`, `CreatePlaylist` rotaları `LyraDestination` enum'una eklendi.

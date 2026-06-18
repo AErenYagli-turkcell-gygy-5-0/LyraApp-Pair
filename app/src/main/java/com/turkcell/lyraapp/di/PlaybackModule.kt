@@ -1,6 +1,6 @@
 package com.turkcell.lyraapp.di
 
-import com.turkcell.lyraapp.data.playback.MockPlaybackRepository
+import com.turkcell.lyraapp.data.playback.ExoPlayerPlaybackRepository
 import com.turkcell.lyraapp.data.playback.PlaybackRepository
 import dagger.Binds
 import dagger.Module
@@ -14,5 +14,5 @@ abstract class PlaybackModule {
 
     @Binds
     @Singleton
-    abstract fun bindPlaybackRepository(impl: MockPlaybackRepository): PlaybackRepository
+    abstract fun bindPlaybackRepository(impl: ExoPlayerPlaybackRepository): PlaybackRepository
 }

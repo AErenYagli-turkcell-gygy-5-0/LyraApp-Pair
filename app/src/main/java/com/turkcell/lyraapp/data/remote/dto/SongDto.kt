@@ -20,3 +20,15 @@ data class SongsResponseDto(
     val data: List<SongDto>,
     @Json(name = "nextCursor") val nextCursor: String?,
 )
+
+@JsonClass(generateAdapter = false)
+data class StreamUrlDataDto(
+    val url: String,
+    val expiresAt: String,
+    val mimeType: String,
+)
+
+@JsonClass(generateAdapter = false)
+data class StreamUrlResponseDto(
+    val data: StreamUrlDataDto,
+)
