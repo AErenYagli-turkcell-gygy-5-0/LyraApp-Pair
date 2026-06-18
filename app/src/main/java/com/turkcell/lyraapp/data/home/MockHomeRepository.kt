@@ -28,12 +28,12 @@ class MockHomeRepository @Inject constructor() : HomeRepository {
         const val NETWORK_DELAY_MS = 800L
 
         val QUICK_PICKS = listOf(
-            QuickPick("qp-1", "Gece Sürüşü", 0xFF8B6FB8, 0xFF4A3D6B),
-            QuickPick("qp-2", "Sabah Kahvesi", 0xFF7C83D9, 0xFF3E4486),
-            QuickPick("qp-3", "Neon Sokaklar", 0xFFD98E4A, 0xFF8A5526),
-            QuickPick("qp-4", "Odaklan", 0xFF4AC2A8, 0xFF1F6E5C),
-            QuickPick("qp-5", "Derin Mavi", 0xFF6FBF5A, 0xFF356B2A),
-            QuickPick("qp-6", "Yaz Anıları", 0xFF5AAFC9, 0xFF2A5F73),
+            QuickPick("qp-1", "Gece Sürüşü", "Sanatçı 1", 210000, 0xFF8B6FB8, 0xFF4A3D6B),
+            QuickPick("qp-2", "Sabah Kahvesi", "Sanatçı 2", 195000, 0xFF7C83D9, 0xFF3E4486),
+            QuickPick("qp-3", "Neon Sokaklar", "Sanatçı 3", 240000, 0xFFD98E4A, 0xFF8A5526),
+            QuickPick("qp-4", "Odaklan", "Sanatçı 4", 180000, 0xFF4AC2A8, 0xFF1F6E5C),
+            QuickPick("qp-5", "Derin Mavi", "Sanatçı 5", 225000, 0xFF6FBF5A, 0xFF356B2A),
+            QuickPick("qp-6", "Yaz Anıları", "Sanatçı 6", 200000, 0xFF5AAFC9, 0xFF2A5F73),
         )
 
         val RECENTLY_PLAYED = listOf(

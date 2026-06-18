@@ -19,6 +19,8 @@ data class HomeFeed(
 data class QuickPick(
     val id: String,
     val title: String,
+    val artist: String,
+    val durationMs: Int,
     val artworkStartColor: Long,
     val artworkEndColor: Long,
 )

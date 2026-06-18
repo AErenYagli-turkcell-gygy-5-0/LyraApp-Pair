@@ -1,7 +1,7 @@
 package com.turkcell.lyraapp.di
 
 import com.turkcell.lyraapp.data.home.HomeRepository
-import com.turkcell.lyraapp.data.home.MockHomeRepository
+import com.turkcell.lyraapp.data.home.RemoteHomeRepository
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -20,5 +20,5 @@ abstract class HomeModule {
 
     @Binds
     @Singleton
-    abstract fun bindHomeRepository(impl: MockHomeRepository): HomeRepository
+    abstract fun bindHomeRepository(impl: RemoteHomeRepository): HomeRepository
 }
