@@ -120,7 +120,7 @@ fun LyraNavHost(
             }
             composable(LyraDestination.Favorites.route) {
                 LikedSongsRoute(
-                    onBack = {},
+                    onBack = {navController.popBackStack()},
                     onNavigateToNowPlaying = {
                         navController.navigate(LyraDestination.NowPlaying.route)
                     },
