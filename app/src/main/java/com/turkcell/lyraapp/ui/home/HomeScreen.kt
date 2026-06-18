@@ -126,7 +126,7 @@ fun HomeScreen(
                     .padding(innerPadding),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
-                item { HomeHeader(greeting = state.greeting, userInitials = state.userInitials, onAvatarClick = onNavigateToProfile) }
+                item { HomeHeader(greeting = state.greeting, userInitials = state.userInitials, isDarkTheme = state.isDarkTheme, onAvatarClick = onNavigateToProfile, onThemeToggle = { onIntent(HomeIntent.ToggleTheme) }) }
                 item { QuickPickGrid(quickPicks = state.quickPicks) }
                 item { SectionHeader(title = "Son çalınanlar", trailingText = "Tümü") }
                 item { RecentlyPlayedRow(items = state.recentlyPlayed) }
@@ -142,7 +142,9 @@ fun HomeScreen(
 private fun HomeHeader(
     greeting: String,
     userInitials: String,
+    isDarkTheme: Boolean,
     onAvatarClick: () -> Unit,
+    onThemeToggle: () -> Unit,
 ) {
     Row(
         modifier = Modifier
@@ -165,10 +167,12 @@ private fun HomeHeader(
             )
         }
         Icon(
-            imageVector = LyraIcons.LightMode,
-            contentDescription = null,
+            imageVector = if (isDarkTheme) LyraIcons.Moon else LyraIcons.LightMode,
+            contentDescription = if (isDarkTheme) "Aydınlık temaya geç" else "Karanlık temaya geç",
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.size(24.dp),
+            modifier = Modifier
+                .size(24.dp)
+                .clickable(onClick = onThemeToggle),
         )
         Spacer(Modifier.width(16.dp))
         UserAvatar(initials = userInitials, onClick = onAvatarClick)
@@ -368,6 +372,7 @@ private fun Artwork(
 private val previewState = HomeUiState(
     greeting = "İyi akşamlar",
     userInitials = "ZK",
+    isDarkTheme = false,
     quickPicks = listOf(
         QuickPick("qp-1", "Gece Sürüşü", 0xFF8B6FB8, 0xFF4A3D6B),
         QuickPick("qp-2", "Sabah Kahvesi", 0xFF7C83D9, 0xFF3E4486),
@@ -392,7 +397,7 @@ private val previewState = HomeUiState(
 @Composable
 private fun HomeScreenDarkPreview() {
     LyraAppTheme(darkTheme = true) {
-        HomeScreen(state = previewState, onIntent = {}, onNavigateToProfile = {})
+        HomeScreen(state = previewState.copy(isDarkTheme = true), onIntent = {}, onNavigateToProfile = {})
     }
 }
 

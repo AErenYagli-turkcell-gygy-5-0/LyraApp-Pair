@@ -3,6 +3,7 @@ package com.turkcell.lyraapp.ui.home
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.turkcell.lyraapp.data.home.HomeRepository
+import com.turkcell.lyraapp.data.preferences.ThemePreferenceRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
@@ -25,6 +26,7 @@ import javax.inject.Inject
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     private val homeRepository: HomeRepository,
+    private val themePreferenceRepository: ThemePreferenceRepository,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HomeUiState(greeting = greetingForNow()))
@@ -35,11 +37,23 @@ class HomeViewModel @Inject constructor(
 
     init {
         loadFeed()
+        viewModelScope.launch {
+            themePreferenceRepository.isDarkTheme.collect { isDark ->
+                _uiState.update { it.copy(isDarkTheme = isDark) }
+            }
+        }
     }
 
     fun onIntent(intent: HomeIntent) {
         when (intent) {
             is HomeIntent.Retry -> loadFeed()
+            is HomeIntent.ToggleTheme -> toggleTheme()
+        }
+    }
+
+    private fun toggleTheme() {
+        viewModelScope.launch {
+            themePreferenceRepository.setTheme(!_uiState.value.isDarkTheme)
         }
     }
 

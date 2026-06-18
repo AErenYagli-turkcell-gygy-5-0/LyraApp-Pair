@@ -14,6 +14,7 @@ data class HomeUiState(
     val isLoading: Boolean = false,
     val greeting: String = "",
     val userInitials: String = "",
+    val isDarkTheme: Boolean = false,
     val quickPicks: List<QuickPick> = emptyList(),
     val recentlyPlayed: List<RecentlyPlayed> = emptyList(),
     val playlistsForYou: List<PlaylistForYou> = emptyList(),
@@ -22,6 +23,8 @@ data class HomeUiState(
 sealed interface HomeIntent {
     /** Besleme yüklemesi başarısız olduğunda kullanıcı yeniden dener. */
     data object Retry : HomeIntent
+    /** Kullanıcı tema ikonuna tıkladığında mevcut temayı tersine çevirir. */
+    data object ToggleTheme : HomeIntent
 }
 
 sealed interface HomeEffect {
