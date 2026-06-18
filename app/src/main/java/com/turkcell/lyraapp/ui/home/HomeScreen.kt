@@ -59,6 +59,7 @@ import com.turkcell.lyraapp.ui.theme.LyraAppTheme
 @Composable
 fun HomeRoute(
     onNavigateToProfile: () -> Unit,
+    onNavigateToNowPlaying: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
@@ -77,6 +78,7 @@ fun HomeRoute(
                         viewModel.onIntent(HomeIntent.Retry)
                     }
                 }
+                is HomeEffect.NavigateToNowPlaying -> onNavigateToNowPlaying()
             }
         }
     }
@@ -127,7 +129,7 @@ fun HomeScreen(
                 verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
                 item { HomeHeader(greeting = state.greeting, userInitials = state.userInitials, isDarkTheme = state.isDarkTheme, onAvatarClick = onNavigateToProfile, onThemeToggle = { onIntent(HomeIntent.ToggleTheme) }) }
-                item { QuickPickGrid(quickPicks = state.quickPicks) }
+                item { QuickPickGrid(quickPicks = state.quickPicks, onIntent = onIntent) }
                 item { SectionHeader(title = "Son çalınanlar", trailingText = "Tümü") }
                 item { RecentlyPlayedRow(items = state.recentlyPlayed) }
                 item { SectionHeader(title = "Senin için çalma listeleri") }
@@ -197,9 +199,8 @@ private fun UserAvatar(initials: String, onClick: () -> Unit) {
         )
     }
 }
-/** Hızlı seçimlerin 2 sütunlu sabit grid'i (6 öğe; dikey scroll LazyColumn'a aittir). */
 @Composable
-private fun QuickPickGrid(quickPicks: List<QuickPick>) {
+private fun QuickPickGrid(quickPicks: List<QuickPick>, onIntent: (HomeIntent) -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -209,9 +210,9 @@ private fun QuickPickGrid(quickPicks: List<QuickPick>) {
         quickPicks.chunked(2).forEach { rowItems ->
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 rowItems.forEach { item ->
-                    QuickPickCard(item = item, modifier = Modifier.weight(1f))
+                    QuickPickCard(item = item, onIntent = onIntent, modifier = Modifier.weight(1f))
                 }
-                if (rowItems.size == 1) {
+                if (rowItems.size < 2) {
                     Spacer(Modifier.weight(1f))
                 }
             }
@@ -222,13 +223,26 @@ private fun QuickPickGrid(quickPicks: List<QuickPick>) {
 @Composable
 private fun QuickPickCard(
     item: QuickPick,
+    onIntent: (HomeIntent) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Row(
         modifier = modifier
             .height(56.dp)
             .clip(RoundedCornerShape(12.dp))
-            .background(MaterialTheme.colorScheme.surfaceContainerHigh),
+            .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+            .clickable {
+                onIntent(
+                    HomeIntent.QuickPickClicked(
+                        id = item.id,
+                        title = item.title,
+                        artist = item.artist,
+                        durationMs = item.durationMs,
+                        artworkStartColor = item.artworkStartColor,
+                        artworkEndColor = item.artworkEndColor,
+                    ),
+                )
+            },
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Artwork(
@@ -374,12 +388,12 @@ private val previewState = HomeUiState(
     userInitials = "ZK",
     isDarkTheme = false,
     quickPicks = listOf(
-        QuickPick("qp-1", "Gece Sürüşü", 0xFF8B6FB8, 0xFF4A3D6B),
-        QuickPick("qp-2", "Sabah Kahvesi", 0xFF7C83D9, 0xFF3E4486),
-        QuickPick("qp-3", "Neon Sokaklar", 0xFFD98E4A, 0xFF8A5526),
-        QuickPick("qp-4", "Odaklan", 0xFF4AC2A8, 0xFF1F6E5C),
-        QuickPick("qp-5", "Derin Mavi", 0xFF6FBF5A, 0xFF356B2A),
-        QuickPick("qp-6", "Yaz Anıları", 0xFF5AAFC9, 0xFF2A5F73),
+        QuickPick("qp-1", "Gece Sürüşü", "Aurora Drift", 210000, 0xFF8B6FB8, 0xFF4A3D6B),
+        QuickPick("qp-2", "Sabah Kahvesi", "Neon Pulse", 195000, 0xFF7C83D9, 0xFF3E4486),
+        QuickPick("qp-3", "Neon Sokaklar", "City Echo", 240000, 0xFFD98E4A, 0xFF8A5526),
+        QuickPick("qp-4", "Odaklan", "Deep Wave", 180000, 0xFF4AC2A8, 0xFF1F6E5C),
+        QuickPick("qp-5", "Derin Mavi", "Solar Flare", 225000, 0xFF6FBF5A, 0xFF356B2A),
+        QuickPick("qp-6", "Yaz Anıları", "Cosmo Beat", 200000, 0xFF5AAFC9, 0xFF2A5F73),
     ),
     recentlyPlayed = listOf(
         RecentlyPlayed("rp-1", "Neon Sokaklar", "Şehir Işıkları", 0xFFD98E4A, 0xFF8A5526),

@@ -106,6 +106,7 @@ fun LyraNavHost(
             composable(LyraDestination.Home.route) {
                 HomeRoute(
                     onNavigateToProfile = { navController.navigateToTab(LyraDestination.Profile) },
+                    onNavigateToNowPlaying = { navController.navigate(LyraDestination.NowPlaying.route) },
                 )
             }
 

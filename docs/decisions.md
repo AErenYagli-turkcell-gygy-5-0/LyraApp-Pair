@@ -200,6 +200,26 @@
   sözleşmesi `PlayerContract.kt`'de tanımlıdır ancak bottom bar ile aynı layout katmanında yönetilir.
 
 
+### Ag Katmani — Retrofit + Moshi
+
+- Karar: **Retrofit 2.11.0** + **Moshi 1.15.2** (reflection adapter) + **OkHttp 4.12.0**.
+
+- Son Güncelleme Tarihi: 18.06.2026
+
+- Uygulama: `di/NetworkModule.kt` tek bir `@Singleton` `Retrofit` instance'ı sağlar; base URL
+  `https://streaming-api.halitkalayci.com/`. `SongApiService` Retrofit arayüzü `GET api/v1/songs`
+  endpoint'ini cursor tabanlı sayfalama ile tanımlar. JSON parse için `MoshiConverterFactory`
+  kullanılır; Moshi `KotlinJsonAdapterFactory` ile Kotlin data class'larını reflection üzerinden
+  çözer (KSP kod üretimi gerekmez). Log interceptor yalnızca debug amacıyla eklendi.
+
+- DTO: `data/remote/dto/SongDto.kt` — API Song şeması ile birebir eşleşir. Artwork alanı API'da
+  yoktur; `RemoteHomeRepository` her song ID'sinin hash'ini sabit bir renk paletine modüler
+  bölerek deterministik gradient çifti atar (recompose'dan etkilenmez).
+
+- Sebep: Retrofit ekosistemi Android'de olgun ve Hilt ile sorunsuz entegre olur. Moshi,
+  Kotlin null-safety'yi Gson'dan daha iyi yönetir; codegen gerektirmez.
+
+
 ### Yeni Ekranlar ve Rota Argumentleri
 
 - Karar: `PlaylistDetail`, `NowPlaying`, `CreatePlaylist` rotaları `LyraDestination` enum'una eklendi.

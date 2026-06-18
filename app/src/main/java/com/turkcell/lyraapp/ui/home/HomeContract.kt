@@ -4,12 +4,6 @@ import com.turkcell.lyraapp.data.home.PlaylistForYou
 import com.turkcell.lyraapp.data.home.QuickPick
 import com.turkcell.lyraapp.data.home.RecentlyPlayed
 
-/**
- * Home ekranının MVI sözleşmesi: UiState + Intent + Effect (bkz. mvi-contracts.md).
- *
- * Bu iterasyonda kartlara tıklama ve "Tümü" davranışsızdır (hedef ekranlar henüz yok);
- * bu nedenle yalnızca yükleme akışına ait niyetler tanımlıdır.
- */
 data class HomeUiState(
     val isLoading: Boolean = false,
     val greeting: String = "",
@@ -21,12 +15,19 @@ data class HomeUiState(
 )
 
 sealed interface HomeIntent {
-    /** Besleme yüklemesi başarısız olduğunda kullanıcı yeniden dener. */
     data object Retry : HomeIntent
-    /** Kullanıcı tema ikonuna tıkladığında mevcut temayı tersine çevirir. */
     data object ToggleTheme : HomeIntent
+    data class QuickPickClicked(
+        val id: String,
+        val title: String,
+        val artist: String,
+        val durationMs: Int,
+        val artworkStartColor: Long,
+        val artworkEndColor: Long,
+    ) : HomeIntent
 }
 
 sealed interface HomeEffect {
     data class ShowError(val message: String) : HomeEffect
+    data object NavigateToNowPlaying : HomeEffect
 }

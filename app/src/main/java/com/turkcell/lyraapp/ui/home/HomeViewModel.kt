@@ -3,6 +3,8 @@ package com.turkcell.lyraapp.ui.home
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.turkcell.lyraapp.data.home.HomeRepository
+import com.turkcell.lyraapp.data.playback.PlaybackRepository
+import com.turkcell.lyraapp.data.playback.Song
 import com.turkcell.lyraapp.data.preferences.ThemePreferenceRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
@@ -27,6 +29,7 @@ import javax.inject.Inject
 class HomeViewModel @Inject constructor(
     private val homeRepository: HomeRepository,
     private val themePreferenceRepository: ThemePreferenceRepository,
+    private val playbackRepository: PlaybackRepository,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HomeUiState(greeting = greetingForNow()))
@@ -48,7 +51,31 @@ class HomeViewModel @Inject constructor(
         when (intent) {
             is HomeIntent.Retry -> loadFeed()
             is HomeIntent.ToggleTheme -> toggleTheme()
+            is HomeIntent.QuickPickClicked -> playSong(intent)
         }
+    }
+
+    private fun playSong(intent: HomeIntent.QuickPickClicked) {
+        viewModelScope.launch {
+            playbackRepository.playSong(
+                Song(
+                    id = intent.id,
+                    title = intent.title,
+                    artist = intent.artist,
+                    duration = formatDuration(intent.durationMs),
+                    artworkStartColor = intent.artworkStartColor,
+                    artworkEndColor = intent.artworkEndColor,
+                ),
+            )
+            _effect.send(HomeEffect.NavigateToNowPlaying)
+        }
+    }
+
+    private fun formatDuration(durationMs: Int): String {
+        val totalSeconds = durationMs / 1000
+        val minutes = totalSeconds / 60
+        val seconds = totalSeconds % 60
+        return "$minutes:${seconds.toString().padStart(2, '0')}"
     }
 
     private fun toggleTheme() {
