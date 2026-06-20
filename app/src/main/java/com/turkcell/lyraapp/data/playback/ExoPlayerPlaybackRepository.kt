@@ -1,12 +1,20 @@
 package com.turkcell.lyraapp.data.playback
 
 import android.content.Context
+import android.content.Intent
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.LinearGradient
+import android.graphics.Paint
+import android.graphics.Shader
 import android.os.Looper
 import androidx.media3.common.MediaItem
+import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import com.turkcell.lyraapp.data.remote.SongApiService
+import java.io.ByteArrayOutputStream
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -33,7 +41,7 @@ class ExoPlayerPlaybackRepository @Inject constructor(
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
     // ExoPlayer'ın main looper üzerinde çalışması için Looper.getMainLooper() verilir.
-    private val player: ExoPlayer = ExoPlayer.Builder(context)
+    internal val player: ExoPlayer = ExoPlayer.Builder(context)
         .setLooper(Looper.getMainLooper())
         .build()
 
@@ -127,12 +135,28 @@ class ExoPlayerPlaybackRepository @Inject constructor(
                 currentPositionLabel = "0:00",
             )
         }
+        context.startService(Intent(context, PlaybackService::class.java))
         try {
             val url = withContext(Dispatchers.IO) {
                 songApiService.getStreamUrl(song.id).data.url
             }
+            val artworkBytes = generateGradientArtwork(
+                song.artworkStartColor.toInt(),
+                song.artworkEndColor.toInt(),
+            )
+            val mediaItem = MediaItem.Builder()
+                .setMediaId(song.id)
+                .setUri(url)
+                .setMediaMetadata(
+                    MediaMetadata.Builder()
+                        .setTitle(song.title)
+                        .setArtist(song.artist)
+                        .setArtworkData(artworkBytes, MediaMetadata.PICTURE_TYPE_FRONT_COVER)
+                        .build(),
+                )
+                .build()
             withContext(Dispatchers.Main) {
-                player.setMediaItem(MediaItem.fromUri(url))
+                player.setMediaItem(mediaItem)
                 player.prepare()
                 player.play()
             }
@@ -181,6 +205,24 @@ class ExoPlayerPlaybackRepository @Inject constructor(
     private fun formatMs(ms: Long): String {
         val totalSeconds = (ms / 1000).toInt()
         return "${totalSeconds / 60}:${(totalSeconds % 60).toString().padStart(2, '0')}"
+    }
+
+    private fun generateGradientArtwork(startColor: Int, endColor: Int): ByteArray {
+        val size = 128
+        val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bitmap)
+        val paint = Paint().apply {
+            shader = LinearGradient(
+                0f, 0f, size.toFloat(), size.toFloat(),
+                startColor, endColor,
+                Shader.TileMode.CLAMP,
+            )
+        }
+        canvas.drawRect(0f, 0f, size.toFloat(), size.toFloat(), paint)
+        val stream = ByteArrayOutputStream()
+        bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream)
+        bitmap.recycle()
+        return stream.toByteArray()
     }
 
     private companion object {

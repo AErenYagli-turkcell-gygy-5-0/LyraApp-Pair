@@ -242,6 +242,30 @@
   Media3/ExoPlayer seçildi. Arayüz sabit kaldığından ViewModel ve UI katmanları etkilenmedi.
 
 
+### Arka Plan Ses Oynatimi — MediaSessionService
+
+- Karar: **Media3 MediaSessionService** ile foreground service + bildirim entegrasyonu.
+
+- Son Guncelleme Tarihi: 20.06.2026
+
+- Uygulama: `PlaybackService` (`data/playback/`) `MediaSessionService` extends eder. ExoPlayer
+  `ExoPlayerPlaybackRepository` singleton'inda kalir; servis ayni instance'i `ForwardingPlayer`
+  ile sarmalayarak `MediaSession` olusturur. `ForwardingPlayer`, bildirimden gelen next/previous
+  komutlarini repository'nin kuyruk yonetimine delege eder. Bildirim otomatik olarak Media3
+  tarafindan yonetilir (play/pause, onceki, sonraki kontrolleri). Begeni butonu `SessionCommand`
+  custom komutu ile bildirime eklenir ve like state degistikce ikon guncellenir. Gradient album
+  kapagi `MediaMetadata.artworkData` olarak set edilir (128x128 bitmap, repository tarafindan
+  uretilir). `POST_NOTIFICATIONS` runtime izni `MainActivity` icinde istenir (API 33+).
+
+- Bagimliliklar: `media3-session:1.5.1` (yeni), `FOREGROUND_SERVICE`,
+  `FOREGROUND_SERVICE_MEDIA_PLAYBACK`, `POST_NOTIFICATIONS` izinleri.
+
+- Sebep: Media3 `MediaSessionService` Android'in resmi arka plan ses oynatimi cozumudur; foreground
+  service, bildirim ve kilit ekrani kontrollerini tek bir API ile yonetir. ExoPlayer'in service'e
+  tasinmasi yerine repository'de birakilmasi tercih edildi cunku mevcut kuyruk yonetimi ve state
+  akisi minimal degisiklikle korunur. ViewModel ve UI katmanlari etkilenmedi.
+
+
 ### Yeni Ekranlar ve Rota Argumentleri
 
 - Karar: `PlaylistDetail`, `NowPlaying`, `CreatePlaylist` rotaları `LyraDestination` enum'una eklendi.
