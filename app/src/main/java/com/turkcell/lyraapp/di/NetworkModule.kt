@@ -2,6 +2,7 @@ package com.turkcell.lyraapp.di
 
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
+import com.turkcell.lyraapp.data.remote.AuthApiService
 import com.turkcell.lyraapp.data.remote.AuthInterceptor
 import com.turkcell.lyraapp.data.remote.HomeApiService
 import com.turkcell.lyraapp.data.remote.SongApiService
@@ -58,4 +59,9 @@ object NetworkModule {
     @Singleton
     fun provideHomeApiService(retrofit: Retrofit): HomeApiService =
         retrofit.create(HomeApiService::class.java)
+
+    @Provides
+    @Singleton
+    fun provideAuthApiService(retrofit: Retrofit): AuthApiService =
+        retrofit.create(AuthApiService::class.java)
 }

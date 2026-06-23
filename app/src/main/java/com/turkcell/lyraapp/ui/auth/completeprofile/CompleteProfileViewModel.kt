@@ -12,6 +12,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.util.Calendar
+import java.util.GregorianCalendar
 import javax.inject.Inject
 
 @HiltViewModel
@@ -27,8 +29,8 @@ class CompleteProfileViewModel @Inject constructor(
 
     fun onIntent(intent: CompleteProfileIntent) {
         when (intent) {
-            is CompleteProfileIntent.FirstNameChanged -> updateForm { it.copy(firstName = intent.value) }
-            is CompleteProfileIntent.LastNameChanged -> updateForm { it.copy(lastName = intent.value) }
+            is CompleteProfileIntent.FirstNameChanged -> updateForm { it.copy(firstName = intent.value.take(MAX_NAME_LENGTH)) }
+            is CompleteProfileIntent.LastNameChanged -> updateForm { it.copy(lastName = intent.value.take(MAX_NAME_LENGTH)) }
             is CompleteProfileIntent.BirthDayChanged -> updateForm { it.copy(birthDay = intent.value.filter { c -> c.isDigit() }.take(2)) }
             is CompleteProfileIntent.BirthMonthChanged -> updateForm { it.copy(birthMonth = intent.value.filter { c -> c.isDigit() }.take(2)) }
             is CompleteProfileIntent.BirthYearChanged -> updateForm { it.copy(birthYear = intent.value.filter { c -> c.isDigit() }.take(4)) }
@@ -63,9 +65,18 @@ class CompleteProfileViewModel @Inject constructor(
     }
 }
 
-private fun CompleteProfileUiState.isFormValid(): Boolean =
-    firstName.isNotBlank() &&
-        lastName.isNotBlank() &&
-        birthDay.isNotBlank() &&
-        birthMonth.isNotBlank() &&
-        birthYear.length == 4
+private const val MAX_NAME_LENGTH = 100
+
+private fun CompleteProfileUiState.isFormValid(): Boolean {
+    if (firstName.isBlank() || lastName.isBlank()) return false
+    val day = birthDay.toIntOrNull() ?: return false
+    val month = birthMonth.toIntOrNull() ?: return false
+    val year = birthYear.toIntOrNull() ?: return false
+    if (birthYear.length != 4) return false
+    if (month !in 1..12 || day < 1) return false
+    val maxDay = GregorianCalendar(year, month - 1, 1).getActualMaximum(Calendar.DAY_OF_MONTH)
+    if (day > maxDay) return false
+    val today = Calendar.getInstance()
+    val birthCal = GregorianCalendar(year, month - 1, day)
+    return !birthCal.after(today)
+}
