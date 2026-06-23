@@ -13,7 +13,9 @@ import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
+import com.turkcell.lyraapp.data.remote.HomeApiService
 import com.turkcell.lyraapp.data.remote.SongApiService
+import com.turkcell.lyraapp.data.remote.dto.RecordPlayBodyDto
 import java.io.ByteArrayOutputStream
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
@@ -36,6 +38,7 @@ import javax.inject.Singleton
 class ExoPlayerPlaybackRepository @Inject constructor(
     @ApplicationContext private val context: Context,
     private val songApiService: SongApiService,
+    private val homeApiService: HomeApiService,
 ) : PlaybackRepository {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
@@ -159,6 +162,9 @@ class ExoPlayerPlaybackRepository @Inject constructor(
                 player.setMediaItem(mediaItem)
                 player.prepare()
                 player.play()
+            }
+            withContext(Dispatchers.IO) {
+                runCatching { homeApiService.recordPlay(RecordPlayBodyDto(song.id)) }
             }
         } catch (e: Exception) {
             _playbackState.update { it.copy(isPlaying = false) }

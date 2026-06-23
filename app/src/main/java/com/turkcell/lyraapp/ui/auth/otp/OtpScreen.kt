@@ -234,12 +234,12 @@ private fun ResendRow(onResendClick: () -> Unit) {
         horizontalArrangement = Arrangement.Center,
     ) {
         Text(
-            text = "Kodu almadin mi? ",
+            text = "Kodu almadın mı? ",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Text(
-            text = "Tekrar gonder",
+            text = "Tekrar gönder",
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.primary,
@@ -270,7 +270,7 @@ private fun VerifyButton(
             )
         } else {
             Text(
-                text = "Dogrula",
+                text = "Doğrula",
                 style = MaterialTheme.typography.titleMedium,
             )
             Spacer(Modifier.width(8.dp))

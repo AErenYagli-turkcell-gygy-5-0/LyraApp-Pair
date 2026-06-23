@@ -1,7 +1,11 @@
 package com.turkcell.lyraapp.data.remote
 
+import com.turkcell.lyraapp.data.remote.dto.RecordPlayBodyDto
+import com.turkcell.lyraapp.data.remote.dto.RecordPlayResponseDto
 import com.turkcell.lyraapp.data.remote.dto.SongListResponseDto
+import retrofit2.http.Body
 import retrofit2.http.GET
+import retrofit2.http.POST
 import retrofit2.http.Query
 
 interface HomeApiService {
@@ -20,4 +24,9 @@ interface HomeApiService {
     suspend fun getRecommendations(
         @Query("limit") limit: Int = 20,
     ): SongListResponseDto
+
+    @POST("api/v1/me/plays")
+    suspend fun recordPlay(
+        @Body body: RecordPlayBodyDto,
+    ): RecordPlayResponseDto
 }

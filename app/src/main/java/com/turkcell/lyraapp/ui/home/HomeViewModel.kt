@@ -43,6 +43,7 @@ class HomeViewModel @Inject constructor(
 
     fun onIntent(intent: HomeIntent) {
         when (intent) {
+            is HomeIntent.ScreenResumed -> loadFeed()
             is HomeIntent.Retry -> loadFeed()
             is HomeIntent.ToggleTheme -> toggleTheme()
             is HomeIntent.SongClicked -> playSong(intent.song)

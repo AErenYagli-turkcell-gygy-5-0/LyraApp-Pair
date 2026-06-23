@@ -14,6 +14,7 @@ data class HomeUiState(
 )
 
 sealed interface HomeIntent {
+    data object ScreenResumed : HomeIntent
     data object Retry : HomeIntent
     data object ToggleTheme : HomeIntent
     data class SongClicked(val song: HomeSong) : HomeIntent
