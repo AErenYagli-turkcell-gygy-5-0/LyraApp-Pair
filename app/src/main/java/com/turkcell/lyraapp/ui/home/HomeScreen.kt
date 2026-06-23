@@ -20,13 +20,13 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -38,24 +38,16 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.turkcell.lyraapp.data.home.PlaylistForYou
-import com.turkcell.lyraapp.data.home.QuickPick
-import com.turkcell.lyraapp.data.home.RecentlyPlayed
+import com.turkcell.lyraapp.data.home.HomeSong
 import com.turkcell.lyraapp.ui.icons.LyraIcons
 import com.turkcell.lyraapp.ui.theme.LyraAppTheme
 
-/**
- * Home akışının durumlu (stateful) giriş noktası.
- *
- * [HomeViewModel]'i Hilt'ten alır, durumu yaşam döngüsüne duyarlı şekilde toplar ve
- * tek seferlik [HomeEffect]'leri tüketir. Yükleme hatasında snackbar üzerinden
- * "Tekrar dene" aksiyonu [HomeIntent.Retry] niyetine köprülenir.
- */
 @Composable
 fun HomeRoute(
     onNavigateToProfile: () -> Unit,
@@ -70,13 +62,7 @@ fun HomeRoute(
         viewModel.effect.collect { effect ->
             when (effect) {
                 is HomeEffect.ShowError -> {
-                    val result = snackbarHostState.showSnackbar(
-                        message = effect.message,
-                        actionLabel = "Tekrar dene",
-                    )
-                    if (result == SnackbarResult.ActionPerformed) {
-                        viewModel.onIntent(HomeIntent.Retry)
-                    }
+                    snackbarHostState.showSnackbar(message = effect.message)
                 }
                 is HomeEffect.NavigateToNowPlaying -> onNavigateToNowPlaying()
             }
@@ -92,13 +78,6 @@ fun HomeRoute(
     )
 }
 
-/**
- * Ana sayfa ("Ne dinlemek istersin?") ekranı.
- *
- * Tamamen durumsuzdur (stateless): durumu [state] üzerinden alır, kullanıcı etkileşimlerini
- * [onIntent] ile yukarı yayımlar. Alt çubuk boşluğu dış Scaffold'dan (LyraNavHost) gelir;
- * burada yalnızca durum çubuğu (status bar) boşluğu yönetilir.
- */
 @Composable
 fun HomeScreen(
     state: HomeUiState,
@@ -112,34 +91,102 @@ fun HomeScreen(
         containerColor = MaterialTheme.colorScheme.background,
         snackbarHost = { SnackbarHost(snackbarHostState) },
     ) { innerPadding ->
-        if (state.isLoading && state.quickPicks.isEmpty()) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding),
-                contentAlignment = Alignment.Center,
-            ) {
-                CircularProgressIndicator()
+        val hasData = state.forYouSongs.isNotEmpty() ||
+            state.recentlyPlayedSongs.isNotEmpty() ||
+            state.recommendationSongs.isNotEmpty()
+
+        when {
+            state.isLoading && !hasData -> {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    CircularProgressIndicator()
+                }
             }
-        } else {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-            ) {
-                item { HomeHeader(greeting = state.greeting, userInitials = state.userInitials, isDarkTheme = state.isDarkTheme, onAvatarClick = onNavigateToProfile, onThemeToggle = { onIntent(HomeIntent.ToggleTheme) }) }
-                item { QuickPickGrid(quickPicks = state.quickPicks, onIntent = onIntent) }
-                item { SectionHeader(title = "Son çalınanlar", trailingText = "Tümü") }
-                item { RecentlyPlayedRow(items = state.recentlyPlayed) }
-                item { SectionHeader(title = "Senin için çalma listeleri") }
-                item { PlaylistsForYouRow(items = state.playlistsForYou) }
+            state.errorMessage != null && !hasData -> {
+                ErrorContent(
+                    message = state.errorMessage,
+                    onRetry = { onIntent(HomeIntent.Retry) },
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding),
+                )
+            }
+            else -> {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding),
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                ) {
+                    item {
+                        HomeHeader(
+                            greeting = state.greeting,
+                            userInitials = state.userInitials,
+                            isDarkTheme = state.isDarkTheme,
+                            onAvatarClick = onNavigateToProfile,
+                            onThemeToggle = { onIntent(HomeIntent.ToggleTheme) },
+                        )
+                    }
+                    if (state.forYouSongs.isNotEmpty()) {
+                        item { ForYouGrid(songs = state.forYouSongs, onIntent = onIntent) }
+                    }
+                    item { SectionHeader(title = "Son çalınanlar", trailingText = "Tümü") }
+                    if (state.recentlyPlayedSongs.isNotEmpty()) {
+                        item { RecentlyPlayedRow(songs = state.recentlyPlayedSongs, onIntent = onIntent) }
+                    } else if (!state.isLoading) {
+                        item { EmptySection(message = "Henüz çalınan şarkı yok.") }
+                    }
+                    item { SectionHeader(title = "Senin için öneriler") }
+                    if (state.recommendationSongs.isNotEmpty()) {
+                        item { RecommendationsRow(songs = state.recommendationSongs, onIntent = onIntent) }
+                    } else if (!state.isLoading) {
+                        item { EmptySection(message = "Henüz öneri yok.") }
+                    }
+                }
             }
         }
     }
 }
 
-/** Selamlama + başlık ile tema ikonu ve kullanıcı avatarını içeren üst bölüm. */
+@Composable
+private fun ErrorContent(
+    message: String,
+    onRetry: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text(
+            text = message,
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(horizontal = 32.dp),
+        )
+        Spacer(Modifier.height(16.dp))
+        Button(onClick = onRetry) {
+            Text(text = "Tekrar dene")
+        }
+    }
+}
+
+@Composable
+private fun EmptySection(message: String) {
+    Text(
+        text = message,
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(horizontal = 20.dp),
+    )
+}
+
 @Composable
 private fun HomeHeader(
     greeting: String,
@@ -199,18 +246,19 @@ private fun UserAvatar(initials: String, onClick: () -> Unit) {
         )
     }
 }
+
 @Composable
-private fun QuickPickGrid(quickPicks: List<QuickPick>, onIntent: (HomeIntent) -> Unit) {
+private fun ForYouGrid(songs: List<HomeSong>, onIntent: (HomeIntent) -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 20.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        quickPicks.chunked(2).forEach { rowItems ->
+        songs.chunked(2).forEach { rowItems ->
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                rowItems.forEach { item ->
-                    QuickPickCard(item = item, onIntent = onIntent, modifier = Modifier.weight(1f))
+                rowItems.forEach { song ->
+                    ForYouCard(song = song, onIntent = onIntent, modifier = Modifier.weight(1f))
                 }
                 if (rowItems.size < 2) {
                     Spacer(Modifier.weight(1f))
@@ -221,8 +269,8 @@ private fun QuickPickGrid(quickPicks: List<QuickPick>, onIntent: (HomeIntent) ->
 }
 
 @Composable
-private fun QuickPickCard(
-    item: QuickPick,
+private fun ForYouCard(
+    song: HomeSong,
     onIntent: (HomeIntent) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -231,29 +279,18 @@ private fun QuickPickCard(
             .height(56.dp)
             .clip(RoundedCornerShape(12.dp))
             .background(MaterialTheme.colorScheme.surfaceContainerHigh)
-            .clickable {
-                onIntent(
-                    HomeIntent.QuickPickClicked(
-                        id = item.id,
-                        title = item.title,
-                        artist = item.artist,
-                        durationMs = item.durationMs,
-                        artworkStartColor = item.artworkStartColor,
-                        artworkEndColor = item.artworkEndColor,
-                    ),
-                )
-            },
+            .clickable { onIntent(HomeIntent.SongClicked(song)) },
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Artwork(
-            startColor = item.artworkStartColor,
-            endColor = item.artworkEndColor,
+            startColor = song.artworkStartColor,
+            endColor = song.artworkEndColor,
             modifier = Modifier
                 .width(56.dp)
                 .fillMaxHeight(),
         )
         Text(
-            text = item.title,
+            text = song.title,
             style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.SemiBold,
             color = MaterialTheme.colorScheme.onSurface,
@@ -264,7 +301,6 @@ private fun QuickPickCard(
     }
 }
 
-/** Bölüm başlığı; [trailingText] verilirse sağda vurgu rengiyle gösterilir (örn. "Tümü"). */
 @Composable
 private fun SectionHeader(
     title: String,
@@ -294,25 +330,28 @@ private fun SectionHeader(
     }
 }
 
-/** "Son çalınanlar" yatay scrollable kart listesi. */
 @Composable
-private fun RecentlyPlayedRow(items: List<RecentlyPlayed>) {
+private fun RecentlyPlayedRow(songs: List<HomeSong>, onIntent: (HomeIntent) -> Unit) {
     LazyRow(
         contentPadding = PaddingValues(horizontal = 20.dp),
         horizontalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        items(items, key = { it.id }) { item ->
-            Column(modifier = Modifier.width(150.dp)) {
+        items(songs, key = { it.id }) { song ->
+            Column(
+                modifier = Modifier
+                    .width(150.dp)
+                    .clickable { onIntent(HomeIntent.SongClicked(song)) },
+            ) {
                 Artwork(
-                    startColor = item.artworkStartColor,
-                    endColor = item.artworkEndColor,
+                    startColor = song.artworkStartColor,
+                    endColor = song.artworkEndColor,
                     modifier = Modifier
                         .size(150.dp)
                         .clip(RoundedCornerShape(16.dp)),
                 )
                 Spacer(Modifier.height(8.dp))
                 Text(
-                    text = item.title,
+                    text = song.title,
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface,
@@ -320,7 +359,7 @@ private fun RecentlyPlayedRow(items: List<RecentlyPlayed>) {
                     overflow = TextOverflow.Ellipsis,
                 )
                 Text(
-                    text = item.subtitle,
+                    text = song.artist,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
@@ -331,28 +370,38 @@ private fun RecentlyPlayedRow(items: List<RecentlyPlayed>) {
     }
 }
 
-/** "Senin için çalma listeleri" yatay scrollable büyük kart listesi. */
 @Composable
-private fun PlaylistsForYouRow(items: List<PlaylistForYou>) {
+private fun RecommendationsRow(songs: List<HomeSong>, onIntent: (HomeIntent) -> Unit) {
     LazyRow(
         contentPadding = PaddingValues(horizontal = 20.dp),
         horizontalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        items(items, key = { it.id }) { item ->
-            Column(modifier = Modifier.width(170.dp)) {
+        items(songs, key = { it.id }) { song ->
+            Column(
+                modifier = Modifier
+                    .width(170.dp)
+                    .clickable { onIntent(HomeIntent.SongClicked(song)) },
+            ) {
                 Artwork(
-                    startColor = item.artworkStartColor,
-                    endColor = item.artworkEndColor,
+                    startColor = song.artworkStartColor,
+                    endColor = song.artworkEndColor,
                     modifier = Modifier
                         .size(170.dp)
                         .clip(RoundedCornerShape(20.dp)),
                 )
                 Spacer(Modifier.height(8.dp))
                 Text(
-                    text = item.title,
+                    text = song.title,
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    text = song.artist,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -361,11 +410,6 @@ private fun PlaylistsForYouRow(items: List<PlaylistForYou>) {
     }
 }
 
-/**
- * Kapak görseli yer tutucusu: modeldeki ARGB renk çiftinden köşegen gradyan + hafif
- * radyal parlama çizer. Gerçek API görsel URL'si sağladığında bu composable görsel
- * yükleyiciyle değiştirilir.
- */
 @Composable
 private fun Artwork(
     startColor: Long,
@@ -387,23 +431,23 @@ private val previewState = HomeUiState(
     greeting = "İyi akşamlar",
     userInitials = "ZK",
     isDarkTheme = false,
-    quickPicks = listOf(
-        QuickPick("qp-1", "Gece Sürüşü", "Aurora Drift", 210000, 0xFF8B6FB8, 0xFF4A3D6B),
-        QuickPick("qp-2", "Sabah Kahvesi", "Neon Pulse", 195000, 0xFF7C83D9, 0xFF3E4486),
-        QuickPick("qp-3", "Neon Sokaklar", "City Echo", 240000, 0xFFD98E4A, 0xFF8A5526),
-        QuickPick("qp-4", "Odaklan", "Deep Wave", 180000, 0xFF4AC2A8, 0xFF1F6E5C),
-        QuickPick("qp-5", "Derin Mavi", "Solar Flare", 225000, 0xFF6FBF5A, 0xFF356B2A),
-        QuickPick("qp-6", "Yaz Anıları", "Cosmo Beat", 200000, 0xFF5AAFC9, 0xFF2A5F73),
+    forYouSongs = listOf(
+        HomeSong("s_neon-tide", "Neon Tide", "Aurora Drift", "City Lights", 32000, 0xFF8B6FB8, 0xFF4A3D6B),
+        HomeSong("s_solar-flare", "Solar Flare", "Neon Pulse", "Cosmic Rays", 28000, 0xFF7C83D9, 0xFF3E4486),
+        HomeSong("s_kervan", "Kervan", "City Echo", "Yolculuk", 45000, 0xFFD98E4A, 0xFF8A5526),
+        HomeSong("s_midnight-run", "Midnight Run", "Deep Wave", "Night Shift", 38000, 0xFF4AC2A8, 0xFF1F6E5C),
+        HomeSong("s_ocean-drive", "Ocean Drive", "Solar Flare", "Summer Nights", 41000, 0xFF6FBF5A, 0xFF356B2A),
+        HomeSong("s_starlight", "Starlight", "Cosmo Beat", "Galaxy", 35000, 0xFF5AAFC9, 0xFF2A5F73),
     ),
-    recentlyPlayed = listOf(
-        RecentlyPlayed("rp-1", "Neon Sokaklar", "Şehir Işıkları", 0xFFD98E4A, 0xFF8A5526),
-        RecentlyPlayed("rp-2", "Derin Mavi", "Okyanus", 0xFF6FBF5A, 0xFF356B2A),
-        RecentlyPlayed("rp-3", "Yıldız Tozu", "Polaris", 0xFF3D5A80, 0xFF1B2A45),
+    recentlyPlayedSongs = listOf(
+        HomeSong("s_neon-tide", "Neon Tide", "Aurora Drift", "City Lights", 32000, 0xFFD98E4A, 0xFF8A5526),
+        HomeSong("s_ocean-drive", "Ocean Drive", "Solar Flare", "Summer Nights", 41000, 0xFF6FBF5A, 0xFF356B2A),
+        HomeSong("s_starlight", "Starlight", "Cosmo Beat", "Galaxy", 35000, 0xFF3D5A80, 0xFF1B2A45),
     ),
-    playlistsForYou = listOf(
-        PlaylistForYou("pl-1", "Haftalık Keşif", 0xFF9B7FC4, 0xFF5A4480),
-        PlaylistForYou("pl-2", "Sakin Akşamlar", 0xFF6B5FB8, 0xFF3A3270),
-        PlaylistForYou("pl-3", "Enerji Ver", 0xFF3FAE9C, 0xFF1E5D52),
+    recommendationSongs = listOf(
+        HomeSong("s_midnight-run", "Midnight Run", "Deep Wave", "Night Shift", 38000, 0xFF9B7FC4, 0xFF5A4480),
+        HomeSong("s_solar-flare", "Solar Flare", "Neon Pulse", "Cosmic Rays", 28000, 0xFF6B5FB8, 0xFF3A3270),
+        HomeSong("s_kervan", "Kervan", "City Echo", "Yolculuk", 45000, 0xFF3FAE9C, 0xFF1E5D52),
     ),
 )
 
@@ -420,5 +464,25 @@ private fun HomeScreenDarkPreview() {
 private fun HomeScreenLightPreview() {
     LyraAppTheme(darkTheme = false) {
         HomeScreen(state = previewState, onIntent = {}, onNavigateToProfile = {})
+    }
+}
+
+@Preview(name = "Home - Loading", showBackground = true, showSystemUi = true)
+@Composable
+private fun HomeScreenLoadingPreview() {
+    LyraAppTheme(darkTheme = true) {
+        HomeScreen(state = HomeUiState(isLoading = true, isDarkTheme = true), onIntent = {}, onNavigateToProfile = {})
+    }
+}
+
+@Preview(name = "Home - Error", showBackground = true, showSystemUi = true)
+@Composable
+private fun HomeScreenErrorPreview() {
+    LyraAppTheme(darkTheme = true) {
+        HomeScreen(
+            state = HomeUiState(errorMessage = "Baglanti hatasi. Lutfen tekrar deneyin.", isDarkTheme = true),
+            onIntent = {},
+            onNavigateToProfile = {},
+        )
     }
 }

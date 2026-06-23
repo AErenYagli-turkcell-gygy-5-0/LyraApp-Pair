@@ -284,6 +284,31 @@
   güncellenir; deep link gereksinimi bu iterasyonda kapsam dışıdır.
 
 
+### Ana Sayfa — Gercek API Entegrasyonu
+
+- Karar: Home ekrani 3 gercek endpoint ile beslenir: `GET /me/recently-played`, `GET /me/for-you`,
+  `GET /me/recommendations`. Eski mock-only yapisi kaldirildi; `RemoteHomeRepository` 3 endpoint'i
+  `coroutineScope { async {} }` ile paralel cagirir.
+
+- Son Guncelleme Tarihi: 23.06.2026
+
+- Uygulama:
+  - `AuthInterceptor` (`data/remote/`) OkHttp interceptor'u olarak eklendi; `AuthTokenManager`'dan
+    token okur ve `Authorization: Bearer <token>` header'i ekler. Token yoksa header eklenmez.
+  - `HomeApiService` (`data/remote/`) Retrofit interface'i — 3 `/me/*` endpoint tanimlar.
+  - `SongListResponseDto` (`data/remote/dto/HomeDto.kt`) — `{ data: List<SongDto> }` wrapper (cursor yok).
+  - `HomeModels.kt` sadeleştirildi: `QuickPick`, `RecentlyPlayed`, `PlaylistForYou` → tek `HomeSong`
+    domain modeli. 3 endpoint ayni Song semasini dondurdugu icin ayri model gereksizdi.
+  - `HomeFeed` alanlari: `forYouSongs`, `recentlyPlayedSongs`, `recommendationSongs`. `userInitials`
+    cikarildi (bu endpoint'lerden gelmiyor).
+  - `HomeContract` guncellendi: `errorMessage: String?` (inline hata state'i), `SongClicked(song)` Intent.
+  - `HomeScreen` loading/empty/error state composable'lari eklendi.
+  - `MockHomeRepository` yeni model yapisina uygun mock verilerle korundu (preview/test icin).
+
+- Sebep: Backend API (`docs/api/openapi.json`) hazir; `/me/*` endpoint'leri JWT Bearer token gerektirir.
+  Tek domain modeli (`HomeSong`) API'nin 3 endpoint icin ayni Song semasini kullanmasini yansitir.
+
+
 ### Kimlik Dogrulama — Telefon + OTP Akisi
 
 - Karar: Sifre tabanli login/register akisi kaldirildi; yerine **telefon numarasi + OTP** tabanli

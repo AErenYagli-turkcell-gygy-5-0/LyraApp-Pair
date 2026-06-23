@@ -2,6 +2,8 @@ package com.turkcell.lyraapp.di
 
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
+import com.turkcell.lyraapp.data.remote.AuthInterceptor
+import com.turkcell.lyraapp.data.remote.HomeApiService
 import com.turkcell.lyraapp.data.remote.SongApiService
 import dagger.Module
 import dagger.Provides
@@ -21,8 +23,9 @@ object NetworkModule {
 
     @Provides
     @Singleton
-    fun provideOkHttpClient(): OkHttpClient =
+    fun provideOkHttpClient(authInterceptor: AuthInterceptor): OkHttpClient =
         OkHttpClient.Builder()
+            .addInterceptor(authInterceptor)
             .addInterceptor(
                 HttpLoggingInterceptor().apply {
                     level = HttpLoggingInterceptor.Level.BODY
@@ -50,4 +53,9 @@ object NetworkModule {
     @Singleton
     fun provideSongApiService(retrofit: Retrofit): SongApiService =
         retrofit.create(SongApiService::class.java)
+
+    @Provides
+    @Singleton
+    fun provideHomeApiService(retrofit: Retrofit): HomeApiService =
+        retrofit.create(HomeApiService::class.java)
 }

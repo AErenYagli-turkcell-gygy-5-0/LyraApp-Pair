@@ -3,6 +3,7 @@ package com.turkcell.lyraapp.ui.home
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.turkcell.lyraapp.data.home.HomeRepository
+import com.turkcell.lyraapp.data.home.HomeSong
 import com.turkcell.lyraapp.data.playback.PlaybackRepository
 import com.turkcell.lyraapp.data.playback.Song
 import com.turkcell.lyraapp.data.preferences.ThemePreferenceRepository
@@ -18,13 +19,6 @@ import kotlinx.coroutines.launch
 import java.util.Calendar
 import javax.inject.Inject
 
-/**
- * Home ekranının ViewModel'i (bkz. mvi-viewmodel-rules.md).
- *
- * Besleme, ekran açılışında bir kez yüklenir; başarısızlıkta [HomeIntent.Retry] ile
- * yeniden denenir. Selamlama metni günün saatinden türetilir (durum sahibi UI değil,
- * ViewModel'dir).
- */
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     private val homeRepository: HomeRepository,
@@ -51,20 +45,20 @@ class HomeViewModel @Inject constructor(
         when (intent) {
             is HomeIntent.Retry -> loadFeed()
             is HomeIntent.ToggleTheme -> toggleTheme()
-            is HomeIntent.QuickPickClicked -> playSong(intent)
+            is HomeIntent.SongClicked -> playSong(intent.song)
         }
     }
 
-    private fun playSong(intent: HomeIntent.QuickPickClicked) {
+    private fun playSong(homeSong: HomeSong) {
         viewModelScope.launch {
             playbackRepository.playSong(
                 Song(
-                    id = intent.id,
-                    title = intent.title,
-                    artist = intent.artist,
-                    duration = formatDuration(intent.durationMs),
-                    artworkStartColor = intent.artworkStartColor,
-                    artworkEndColor = intent.artworkEndColor,
+                    id = homeSong.id,
+                    title = homeSong.title,
+                    artist = homeSong.artist,
+                    duration = formatDuration(homeSong.durationMs),
+                    artworkStartColor = homeSong.artworkStartColor,
+                    artworkEndColor = homeSong.artworkEndColor,
                 ),
             )
             _effect.send(HomeEffect.NavigateToNowPlaying)
@@ -87,27 +81,29 @@ class HomeViewModel @Inject constructor(
     private fun loadFeed() {
         if (_uiState.value.isLoading) return
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true) }
-            val result = homeRepository.getHomeFeed()
-            _uiState.update { it.copy(isLoading = false) }
-            result
+            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+            homeRepository.getHomeFeed()
                 .onSuccess { feed ->
                     _uiState.update {
                         it.copy(
-                            userInitials = feed.userInitials,
-                            quickPicks = feed.quickPicks,
-                            recentlyPlayed = feed.recentlyPlayed,
-                            playlistsForYou = feed.playlistsForYou,
+                            isLoading = false,
+                            forYouSongs = feed.forYouSongs,
+                            recentlyPlayedSongs = feed.recentlyPlayedSongs,
+                            recommendationSongs = feed.recommendationSongs,
                         )
                     }
                 }
                 .onFailure { error ->
-                    _effect.send(HomeEffect.ShowError(error.message ?: "Ana sayfa yüklenemedi."))
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            errorMessage = error.message ?: "Ana sayfa yuklenemedi.",
+                        )
+                    }
                 }
         }
     }
 
-    // java.time yerine Calendar: minSdk 24'te desugaring gerektirmez.
     private fun greetingForNow(): String =
         when (Calendar.getInstance().get(Calendar.HOUR_OF_DAY)) {
             in 5..11 -> "Günaydın"
