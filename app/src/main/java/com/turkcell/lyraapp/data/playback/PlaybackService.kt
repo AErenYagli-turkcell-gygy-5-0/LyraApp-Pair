@@ -1,5 +1,6 @@
 package com.turkcell.lyraapp.data.playback
 
+import android.app.PendingIntent
 import android.content.Intent
 import android.os.Bundle
 import androidx.annotation.OptIn
@@ -75,7 +76,15 @@ class PlaybackService : MediaSessionService() {
             }
         }
 
+        val sessionActivityIntent = PendingIntent.getActivity(
+            this,
+            0,
+            packageManager.getLaunchIntentForPackage(packageName),
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+        )
+
         mediaSession = MediaSession.Builder(this, forwardingPlayer)
+            .setSessionActivity(sessionActivityIntent)
             .setCallback(PlaybackSessionCallback())
             .setCustomLayout(buildCustomLayout(isLiked = false))
             .build()

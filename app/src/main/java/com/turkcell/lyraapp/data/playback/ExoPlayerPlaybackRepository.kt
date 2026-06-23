@@ -138,7 +138,10 @@ class ExoPlayerPlaybackRepository @Inject constructor(
                 currentPositionLabel = "0:00",
             )
         }
-        context.startService(Intent(context, PlaybackService::class.java))
+        androidx.core.content.ContextCompat.startForegroundService(
+            context,
+            Intent(context, PlaybackService::class.java),
+        )
         try {
             val url = withContext(Dispatchers.IO) {
                 songApiService.getStreamUrl(song.id).data.url
