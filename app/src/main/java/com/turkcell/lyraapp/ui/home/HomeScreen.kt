@@ -18,6 +18,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
@@ -264,19 +266,44 @@ private fun UserAvatar(initials: String, onClick: () -> Unit) {
 
 @Composable
 private fun ForYouGrid(songs: List<HomeSong>, onIntent: (HomeIntent) -> Unit) {
+    val pages = songs.chunked(6)
+    val pagerState = rememberPagerState(pageCount = { pages.size })
+
     Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 20.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        songs.chunked(2).forEach { rowItems ->
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                rowItems.forEach { song ->
-                    ForYouCard(song = song, onIntent = onIntent, modifier = Modifier.weight(1f))
+        HorizontalPager(
+            state = pagerState,
+            contentPadding = PaddingValues(horizontal = 20.dp),
+            pageSpacing = 10.dp,
+        ) { pageIndex ->
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                pages[pageIndex].chunked(2).forEach { rowItems ->
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        rowItems.forEach { song ->
+                            ForYouCard(song = song, onIntent = onIntent, modifier = Modifier.weight(1f))
+                        }
+                        if (rowItems.size < 2) {
+                            Spacer(Modifier.weight(1f))
+                        }
+                    }
                 }
-                if (rowItems.size < 2) {
-                    Spacer(Modifier.weight(1f))
+            }
+        }
+        if (pages.size > 1) {
+            Spacer(Modifier.height(12.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                repeat(pages.size) { index ->
+                    Box(
+                        modifier = Modifier
+                            .size(if (pagerState.currentPage == index) 8.dp else 6.dp)
+                            .clip(CircleShape)
+                            .background(
+                                if (pagerState.currentPage == index) MaterialTheme.colorScheme.primary
+                                else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f),
+                            ),
+                    )
                 }
             }
         }
