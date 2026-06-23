@@ -19,8 +19,9 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.turkcell.lyraapp.ui.auth.completeprofile.CompleteProfileRoute
 import com.turkcell.lyraapp.ui.auth.login.LoginRoute
-import com.turkcell.lyraapp.ui.auth.register.RegisterRoute
+import com.turkcell.lyraapp.ui.auth.otp.OtpRoute
 import com.turkcell.lyraapp.ui.createplaylist.CreatePlaylistRoute
 import com.turkcell.lyraapp.ui.home.HomeRoute
 import com.turkcell.lyraapp.ui.library.LibraryRoute
@@ -81,24 +82,40 @@ fun LyraNavHost(
         ) {
             composable(LyraDestination.Login.route) {
                 LoginRoute(
-                    onNavigateToHome = { navController.navigateToHomeClearingAuth() },
-                    onNavigateToRegister = {
-                        navController.navigate(LyraDestination.Register.route) {
+                    onNavigateToOtp = { phoneNumber, firstTime ->
+                        navController.navigate(otpRoute(phoneNumber, firstTime)) {
                             launchSingleTop = true
                         }
                     },
                 )
             }
 
-            composable(LyraDestination.Register.route) {
-                RegisterRoute(
+            composable(
+                route = "${LyraDestination.Otp.route}?phoneNumber={phoneNumber}&firstTime={firstTime}",
+                arguments = listOf(
+                    navArgument("phoneNumber") { type = NavType.StringType },
+                    navArgument("firstTime") { type = NavType.BoolType; defaultValue = false },
+                ),
+            ) {
+                OtpRoute(
                     onNavigateToHome = { navController.navigateToHomeClearingAuth() },
-                    onNavigateToLogin = {
-                        navController.navigate(LyraDestination.Login.route) {
-                            popUpTo(LyraDestination.Login.route) { inclusive = false }
+                    onNavigateToCompleteProfile = { phoneNumber ->
+                        navController.navigate(completeProfileRoute(phoneNumber)) {
                             launchSingleTop = true
                         }
                     },
+                    onNavigateBack = { navController.popBackStack() },
+                )
+            }
+
+            composable(
+                route = "${LyraDestination.CompleteProfile.route}?phoneNumber={phoneNumber}",
+                arguments = listOf(
+                    navArgument("phoneNumber") { type = NavType.StringType; defaultValue = "" },
+                ),
+            ) {
+                CompleteProfileRoute(
+                    onNavigateToHome = { navController.navigateToHomeClearingAuth() },
                     onNavigateBack = { navController.popBackStack() },
                 )
             }
@@ -126,7 +143,7 @@ fun LyraNavHost(
             }
             composable(LyraDestination.Favorites.route) {
                 LikedSongsRoute(
-                    onBack = {navController.popBackStack()},
+                    onBack = { navController.popBackStack() },
                     onNavigateToNowPlaying = {
                         navController.navigate(LyraDestination.NowPlaying.route)
                     },

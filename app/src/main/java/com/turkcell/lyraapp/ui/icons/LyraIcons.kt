@@ -247,6 +247,14 @@ object LyraIcons {
             pathData = "M19,9h-4V3H9v6H5l7,7 7,-7zM5,18v2h14v-2H5z",
         )
     }
+
+    /** Tamamla butonu onay ikonu (Material Check). */
+    val Check: ImageVector by lazy {
+        lyraIcon(
+            name = "Check",
+            pathData = "M9,16.17L4.83,12l-1.42,1.41L9,19 21,7l-1.41,-1.41z",
+        )
+    }
 }
 
 /**

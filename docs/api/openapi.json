@@ -1,571 +1,1622 @@
 {
-    "openapi": "3.0.3",
-    "info": {
-        "title": "Streaming API",
-        "version": "1.0.0",
-        "description": "Music streaming backend for a Media3/ExoPlayer client. Streaming works in two steps: request a short-lived signed URL via `/songs/{id}/stream-url`, then feed that URL to the player. The `/stream/{songId}` endpoint fully supports HTTP Range requests (200 / 206 / 416), which ExoPlayer relies on for seeking."
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Streaming API",
+    "version": "1.0.0",
+    "description": "Music streaming backend for a Media3/ExoPlayer client. Streaming works in two steps: request a short-lived signed URL via `/songs/{id}/stream-url`, then feed that URL to the player. The `/stream/{songId}` endpoint fully supports HTTP Range requests (200 / 206 / 416), which ExoPlayer relies on for seeking."
+  },
+  "servers": [
+    {
+      "url": "https://streaming-api.halitkalayci.com"
     },
-    "servers": [
-        {
-            "url": "https://streaming-api.halitkalayci.com"
-        },
-        {
-            "url": "http://localhost:3000"
-        }
-    ],
-    "tags": [
-        {
-            "name": "songs",
-            "description": "Song catalog"
-        },
-        {
-            "name": "playlists",
-            "description": "Playlists"
-        },
-        {
-            "name": "stream",
-            "description": "Signed, Range-aware audio delivery"
-        },
-        {
-            "name": "meta",
-            "description": "Service health"
-        }
-    ],
-    "paths": {
-        "/health": {
-            "get": {
-                "tags": [
-                    "meta"
-                ],
-                "summary": "Health check",
-                "responses": {
-                    "200": {
-                        "description": "Service is up",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "object",
-                                    "properties": {
-                                        "status": {
-                                            "type": "string",
-                                            "example": "ok"
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/songs": {
-            "get": {
-                "tags": [
-                    "songs"
-                ],
-                "summary": "List songs (cursor pagination + search)",
-                "parameters": [
-                    {
-                        "name": "limit",
-                        "in": "query",
-                        "schema": {
-                            "type": "integer",
-                            "minimum": 1,
-                            "maximum": 100,
-                            "default": 20
-                        },
-                        "description": "Page size."
-                    },
-                    {
-                        "name": "cursor",
-                        "in": "query",
-                        "schema": {
-                            "type": "string"
-                        },
-                        "description": "Opaque cursor from a previous response (`nextCursor`). Omit for the first page."
-                    },
-                    {
-                        "name": "q",
-                        "in": "query",
-                        "schema": {
-                            "type": "string",
-                            "minLength": 1,
-                            "maxLength": 200
-                        },
-                        "description": "Case-insensitive search over title, artist and album."
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "One page of songs",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "type": "array",
-                                            "items": {
-                                                "$ref": "#/components/schemas/Song"
-                                            }
-                                        },
-                                        "nextCursor": {
-                                            "type": "string",
-                                            "nullable": true,
-                                            "description": "Pass back as `cursor` to fetch the next page; null when exhausted."
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    },
-                    "400": {
-                        "description": "Invalid limit, cursor or search query",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/Error"
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/songs/{id}": {
-            "get": {
-                "tags": [
-                    "songs"
-                ],
-                "summary": "Song detail",
-                "parameters": [
-                    {
-                        "$ref": "#/components/parameters/SongId"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "The song",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "$ref": "#/components/schemas/Song"
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    },
-                    "404": {
-                        "description": "Song not found",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/Error"
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/songs/{id}/stream-url": {
-            "get": {
-                "tags": [
-                    "songs"
-                ],
-                "summary": "Mint a short-lived signed stream URL",
-                "description": "Returns a URL the client passes directly to ExoPlayer. The signature is an HMAC-SHA256 over `<songId>:<expiresAt>`; TTL is 300 seconds by default. Mint right before playback rather than caching alongside list responses.",
-                "parameters": [
-                    {
-                        "$ref": "#/components/parameters/SongId"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Signed URL payload",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "type": "object",
-                                            "properties": {
-                                                "url": {
-                                                    "type": "string",
-                                                    "format": "uri",
-                                                    "example": "http://localhost:3000/api/v1/stream/s_neon-tide?expires=1781192262&signature=GJHnZTiw..."
-                                                },
-                                                "expiresAt": {
-                                                    "type": "string",
-                                                    "format": "date-time"
-                                                },
-                                                "mimeType": {
-                                                    "type": "string",
-                                                    "example": "audio/wav"
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    },
-                    "404": {
-                        "description": "Song not found",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/Error"
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/stream/{songId}": {
-            "get": {
-                "tags": [
-                    "stream"
-                ],
-                "summary": "Stream audio bytes (HTTP Range aware)",
-                "description": "Serves the audio object referenced by a signed URL. Single byte ranges are honored (`bytes=N-`, `bytes=N-M`, `bytes=-N`); multi-range or unknown units fall back to the full body, as RFC 9110 permits. With an S3/CloudFront storage provider this endpoint responds 302 to a CDN-signed URL instead of proxying.",
-                "parameters": [
-                    {
-                        "name": "songId",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        },
-                        "example": "s_neon-tide"
-                    },
-                    {
-                        "name": "expires",
-                        "in": "query",
-                        "required": true,
-                        "schema": {
-                            "type": "integer"
-                        },
-                        "description": "Expiry as Unix epoch seconds (part of the signed token)."
-                    },
-                    {
-                        "name": "signature",
-                        "in": "query",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        },
-                        "description": "base64url HMAC-SHA256 signature."
-                    },
-                    {
-                        "name": "Range",
-                        "in": "header",
-                        "required": false,
-                        "schema": {
-                            "type": "string"
-                        },
-                        "example": "bytes=100000-",
-                        "description": "Standard HTTP byte range; ExoPlayer sends this on seek."
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Full body (no Range header sent)",
-                        "headers": {
-                            "Accept-Ranges": {
-                                "schema": {
-                                    "type": "string",
-                                    "example": "bytes"
-                                }
-                            },
-                            "Content-Length": {
-                                "schema": {
-                                    "type": "integer"
-                                }
-                            }
-                        },
-                        "content": {
-                            "audio/wav": {
-                                "schema": {
-                                    "type": "string",
-                                    "format": "binary"
-                                }
-                            }
-                        }
-                    },
-                    "206": {
-                        "description": "Partial content for a satisfiable Range",
-                        "headers": {
-                            "Content-Range": {
-                                "schema": {
-                                    "type": "string",
-                                    "example": "bytes 100000-1411243/1411244"
-                                }
-                            },
-                            "Content-Length": {
-                                "schema": {
-                                    "type": "integer"
-                                }
-                            },
-                            "Accept-Ranges": {
-                                "schema": {
-                                    "type": "string",
-                                    "example": "bytes"
-                                }
-                            }
-                        },
-                        "content": {
-                            "audio/wav": {
-                                "schema": {
-                                    "type": "string",
-                                    "format": "binary"
-                                }
-                            }
-                        }
-                    },
-                    "302": {
-                        "description": "Redirect to a CDN-signed URL (only with an external storage provider)"
-                    },
-                    "403": {
-                        "description": "Invalid signature",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/Error"
-                                }
-                            }
-                        }
-                    },
-                    "404": {
-                        "description": "Song or audio object not found",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/Error"
-                                }
-                            }
-                        }
-                    },
-                    "410": {
-                        "description": "Stream URL has expired",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/Error"
-                                }
-                            }
-                        }
-                    },
-                    "416": {
-                        "description": "Requested range not satisfiable",
-                        "headers": {
-                            "Content-Range": {
-                                "schema": {
-                                    "type": "string",
-                                    "example": "bytes */1411244"
-                                }
-                            }
-                        },
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/Error"
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/playlists": {
-            "get": {
-                "tags": [
-                    "playlists"
-                ],
-                "summary": "List playlists",
-                "responses": {
-                    "200": {
-                        "description": "All playlists (without songs)",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "type": "array",
-                                            "items": {
-                                                "$ref": "#/components/schemas/Playlist"
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/playlists/{id}": {
-            "get": {
-                "tags": [
-                    "playlists"
-                ],
-                "summary": "Playlist detail with ordered songs",
-                "parameters": [
-                    {
-                        "name": "id",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        },
-                        "example": "p_late-night-drive"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Playlist with its songs in track order",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "$ref": "#/components/schemas/PlaylistWithSongs"
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    },
-                    "404": {
-                        "description": "Playlist not found",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/Error"
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    },
-    "components": {
-        "parameters": {
-            "SongId": {
-                "name": "id",
-                "in": "path",
-                "required": true,
-                "schema": {
-                    "type": "string"
-                },
-                "example": "s_neon-tide"
-            }
-        },
-        "schemas": {
-            "Song": {
-                "type": "object",
-                "properties": {
-                    "id": {
-                        "type": "string",
-                        "example": "s_neon-tide"
-                    },
-                    "title": {
-                        "type": "string",
-                        "example": "Neon Tide"
-                    },
-                    "artist": {
-                        "type": "string",
-                        "example": "Aurora Drift"
-                    },
-                    "album": {
-                        "type": "string",
-                        "nullable": true,
-                        "example": "City Lights"
-                    },
-                    "durationMs": {
-                        "type": "integer",
-                        "example": 32000
-                    },
-                    "mimeType": {
-                        "type": "string",
-                        "example": "audio/wav"
-                    },
-                    "sizeBytes": {
-                        "type": "integer",
-                        "example": 1411244
-                    },
-                    "createdAt": {
-                        "type": "string",
-                        "format": "date-time"
-                    }
-                }
-            },
-            "Playlist": {
-                "type": "object",
-                "properties": {
-                    "id": {
-                        "type": "string",
-                        "example": "p_late-night-drive"
-                    },
-                    "name": {
-                        "type": "string",
-                        "example": "Late Night Drive"
-                    },
-                    "description": {
-                        "type": "string",
-                        "nullable": true
-                    },
-                    "createdAt": {
-                        "type": "string",
-                        "format": "date-time"
-                    }
-                }
-            },
-            "PlaylistWithSongs": {
-                "allOf": [
-                    {
-                        "$ref": "#/components/schemas/Playlist"
-                    },
-                    {
-                        "type": "object",
-                        "properties": {
-                            "songs": {
-                                "type": "array",
-                                "items": {
-                                    "$ref": "#/components/schemas/Song"
-                                }
-                            }
-                        }
-                    }
-                ]
-            },
-            "Error": {
-                "type": "object",
-                "properties": {
-                    "error": {
-                        "type": "object",
-                        "properties": {
-                            "code": {
-                                "type": "string",
-                                "example": "NOT_FOUND"
-                            },
-                            "message": {
-                                "type": "string",
-                                "example": "Song not found"
-                            }
-                        }
-                    }
-                }
-            }
-        }
+    {
+      "url": "http://localhost:3000"
     }
+  ],
+  "tags": [
+    {
+      "name": "auth",
+      "description": "Phone-number authentication with a mocked OTP and JWT access/refresh tokens."
+    },
+    {
+      "name": "me",
+      "description": "Endpoints scoped to the signed-in user (require a Bearer access token)."
+    },
+    {
+      "name": "songs",
+      "description": "Song catalog"
+    },
+    {
+      "name": "playlists",
+      "description": "Public/featured playlists"
+    },
+    {
+      "name": "stream",
+      "description": "Signed, Range-aware audio delivery"
+    },
+    {
+      "name": "meta",
+      "description": "Service health"
+    }
+  ],
+  "paths": {
+    "/health": {
+      "get": {
+        "tags": [
+          "meta"
+        ],
+        "summary": "Health check",
+        "responses": {
+          "200": {
+            "description": "Service is up",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "example": "ok"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/otp/request": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Request an OTP for a phone number (mock)",
+        "description": "Starts the login/registration flow. **No SMS is actually sent** — this is a mock. The response includes `firstTime`: it is `true` when the phone has no account yet, or has an account that has not finished registration (first name, last name and birth date not all filled in). When `firstTime` is `true`, send the user through `POST /api/v1/me/update-informations` after verifying. Follow up with `POST /auth/otp/verify`.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "phone"
+                ],
+                "properties": {
+                  "phone": {
+                    "type": "string",
+                    "example": "+905551112233",
+                    "description": "Phone number in E.164-ish form (a leading + is kept)."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OTP \"sent\" (mock)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "sent": {
+                          "type": "boolean",
+                          "example": true
+                        },
+                        "firstTime": {
+                          "type": "boolean",
+                          "example": true,
+                          "description": "True when the phone is new or registration is incomplete."
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid phone number",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/otp/verify": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Verify an OTP and obtain access + refresh tokens",
+        "description": "Verifies the OTP for a phone number. Because the SMS system is mocked, the following codes are **ALWAYS valid**:\n\n- `280600`\n- `260702`\n- `250506`\n- `101000`\n- `346134`\n- `123456`\n\nAny other code returns **401**. On success the user is created on first login (passwordless signup) and a JWT access token plus an opaque refresh token are returned. Send the access token as `Authorization: Bearer <token>` to the `/api/v1/me/*` endpoints.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "phone",
+                  "code"
+                ],
+                "properties": {
+                  "phone": {
+                    "type": "string",
+                    "example": "+905551112233"
+                  },
+                  "code": {
+                    "type": "string",
+                    "example": "123456",
+                    "description": "One of the always-valid mock codes listed above."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Authenticated session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/AuthSession"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing/invalid phone or code",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid OTP code",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/refresh": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Exchange a refresh token for a new token pair (rotation)",
+        "description": "Validates the refresh token, then **rotates** it: the presented token is revoked and a brand-new access + refresh pair is returned. A revoked, expired or unknown token returns 401.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "refreshToken"
+                ],
+                "properties": {
+                  "refreshToken": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "New token pair",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/AuthTokens"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing refresh token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or expired refresh token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/logout": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Revoke a refresh token",
+        "description": "Revokes the given refresh token so it can no longer be used to refresh. Idempotent — revoking an already-revoked or unknown token still returns 200.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "refreshToken"
+                ],
+                "properties": {
+                  "refreshToken": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Token revoked",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "revoked": {
+                          "type": "boolean",
+                          "example": true
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing refresh token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/me": {
+      "get": {
+        "tags": [
+          "me"
+        ],
+        "summary": "Current user profile",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The authenticated user",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/User"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid access token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/me/update-informations": {
+      "post": {
+        "tags": [
+          "me"
+        ],
+        "summary": "Complete/update registration profile",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "description": "Sets the user's first name, last name and birth date — the registration step for `firstTime` users. Once all three are set the user's `profileCompleted` becomes true and subsequent `otp/request` calls return `firstTime: false`. Can also be used later to edit the profile.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "firstName",
+                  "lastName",
+                  "birthDate"
+                ],
+                "properties": {
+                  "firstName": {
+                    "type": "string",
+                    "maxLength": 100,
+                    "example": "Halit"
+                  },
+                  "lastName": {
+                    "type": "string",
+                    "maxLength": 100,
+                    "example": "Kalaycı"
+                  },
+                  "birthDate": {
+                    "type": "string",
+                    "format": "date",
+                    "example": "1995-06-20",
+                    "description": "Calendar date in YYYY-MM-DD; must be a valid, non-future date."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated user (profileCompleted: true)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/User"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid name or birth date",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid access token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/me/plays": {
+      "post": {
+        "tags": [
+          "me"
+        ],
+        "summary": "Record a play",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "description": "Records that the user played a song. This is what powers \"Son Çalınanlar\" (recently played) and the recommendation endpoints. The client should call this once per real playback (not per Range request).",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "songId"
+                ],
+                "properties": {
+                  "songId": {
+                    "type": "string",
+                    "example": "s_neon-tide"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Play recorded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "recorded": {
+                          "type": "boolean",
+                          "example": true
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid access token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Song not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/me/recently-played": {
+      "get": {
+        "tags": [
+          "me"
+        ],
+        "summary": "\"Son Çalınanlar\" — recently played songs",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "description": "Distinct songs the user has played, ordered by the most recent play of each.",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            },
+            "description": "Maximum number of songs to return."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Recently played songs (most recent first)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Song"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid access token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/me/for-you": {
+      "get": {
+        "tags": [
+          "me"
+        ],
+        "summary": "\"Senin İçin Müzikler\" — a personalized mix",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "description": "A mix drawn from the user's most-played artists. Falls back to the newest catalog when the user has no play history yet.",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            },
+            "description": "Maximum number of songs to return."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Personalized song list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Song"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid access token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/me/recommendations": {
+      "get": {
+        "tags": [
+          "me"
+        ],
+        "summary": "\"Öneriler\" — recommendations",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "description": "More songs by artists the user has played, excluding songs already played. Falls back to the newest unplayed catalog.",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            },
+            "description": "Maximum number of songs to return."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Recommended songs",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Song"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid access token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/me/playlists": {
+      "get": {
+        "tags": [
+          "me"
+        ],
+        "summary": "List the user's own playlists",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The user's playlists",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Playlist"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid access token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "me"
+        ],
+        "summary": "Create a playlist",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "name"
+                ],
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "maxLength": 120,
+                    "example": "My Mix"
+                  },
+                  "description": {
+                    "type": "string",
+                    "maxLength": 500,
+                    "nullable": true,
+                    "example": "Songs for the commute"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created playlist",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/Playlist"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid name or description",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid access token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/me/playlists/{id}/tracks": {
+      "post": {
+        "tags": [
+          "me"
+        ],
+        "summary": "Add a song to one of the user's playlists",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Playlist id (must be owned by the caller)."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "songId"
+                ],
+                "properties": {
+                  "songId": {
+                    "type": "string",
+                    "example": "s_kervan"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Song added",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "added": {
+                          "type": "boolean",
+                          "example": true
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid access token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "You do not own this playlist",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Playlist or song not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Song is already in the playlist",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/me/playlists/{id}/tracks/{songId}": {
+      "delete": {
+        "tags": [
+          "me"
+        ],
+        "summary": "Remove a song from one of the user's playlists",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "description": "Removes the song and resequences the remaining tracks so positions stay contiguous.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Playlist id (must be owned by the caller)."
+          },
+          {
+            "name": "songId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "s_kervan"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Song removed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "removed": {
+                          "type": "boolean",
+                          "example": true
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid access token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "You do not own this playlist",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Playlist not found or song not in the playlist",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/songs": {
+      "get": {
+        "tags": [
+          "songs"
+        ],
+        "summary": "List songs (cursor pagination + search)",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            },
+            "description": "Page size."
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Opaque cursor from a previous response (`nextCursor`). Omit for the first page."
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200
+            },
+            "description": "Case-insensitive search over title, artist and album."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "One page of songs",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Song"
+                      }
+                    },
+                    "nextCursor": {
+                      "type": "string",
+                      "nullable": true,
+                      "description": "Pass back as `cursor` to fetch the next page; null when exhausted."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid limit, cursor or search query",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/songs/{id}": {
+      "get": {
+        "tags": [
+          "songs"
+        ],
+        "summary": "Song detail",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/SongId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The song",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/Song"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Song not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/songs/{id}/stream-url": {
+      "get": {
+        "tags": [
+          "songs"
+        ],
+        "summary": "Mint a short-lived signed stream URL",
+        "description": "Returns a URL the client passes directly to ExoPlayer. The signature is an HMAC-SHA256 over `<songId>:<expiresAt>`; TTL is 300 seconds by default. Mint right before playback rather than caching alongside list responses.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/SongId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Signed URL payload",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "url": {
+                          "type": "string",
+                          "format": "uri",
+                          "example": "http://localhost:3000/api/v1/stream/s_neon-tide?expires=1781192262&signature=GJHnZTiw..."
+                        },
+                        "expiresAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "mimeType": {
+                          "type": "string",
+                          "example": "audio/wav"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Song not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/stream/{songId}": {
+      "get": {
+        "tags": [
+          "stream"
+        ],
+        "summary": "Stream audio bytes (HTTP Range aware)",
+        "description": "Serves the audio object referenced by a signed URL. Single byte ranges are honored (`bytes=N-`, `bytes=N-M`, `bytes=-N`); multi-range or unknown units fall back to the full body, as RFC 9110 permits. With an S3/CloudFront storage provider this endpoint responds 302 to a CDN-signed URL instead of proxying.",
+        "parameters": [
+          {
+            "name": "songId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "s_neon-tide"
+          },
+          {
+            "name": "expires",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Expiry as Unix epoch seconds (part of the signed token)."
+          },
+          {
+            "name": "signature",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "base64url HMAC-SHA256 signature."
+          },
+          {
+            "name": "Range",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "example": "bytes=100000-",
+            "description": "Standard HTTP byte range; ExoPlayer sends this on seek."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Full body (no Range header sent)",
+            "headers": {
+              "Accept-Ranges": {
+                "schema": {
+                  "type": "string",
+                  "example": "bytes"
+                }
+              },
+              "Content-Length": {
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "audio/wav": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "206": {
+            "description": "Partial content for a satisfiable Range",
+            "headers": {
+              "Content-Range": {
+                "schema": {
+                  "type": "string",
+                  "example": "bytes 100000-1411243/1411244"
+                }
+              },
+              "Content-Length": {
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "Accept-Ranges": {
+                "schema": {
+                  "type": "string",
+                  "example": "bytes"
+                }
+              }
+            },
+            "content": {
+              "audio/wav": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "302": {
+            "description": "Redirect to a CDN-signed URL (only with an external storage provider)"
+          },
+          "403": {
+            "description": "Invalid signature",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Song or audio object not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Stream URL has expired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "416": {
+            "description": "Requested range not satisfiable",
+            "headers": {
+              "Content-Range": {
+                "schema": {
+                  "type": "string",
+                  "example": "bytes */1411244"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/playlists": {
+      "get": {
+        "tags": [
+          "playlists"
+        ],
+        "summary": "List playlists",
+        "responses": {
+          "200": {
+            "description": "All playlists (without songs)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Playlist"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/playlists/{id}": {
+      "get": {
+        "tags": [
+          "playlists"
+        ],
+        "summary": "Playlist detail with ordered songs",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "p_late-night-drive"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Playlist with its songs in track order",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/PlaylistWithSongs"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Playlist not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "Paste the `accessToken` from `POST /api/v1/auth/otp/verify`. It is sent as `Authorization: Bearer <token>`."
+      }
+    },
+    "parameters": {
+      "SongId": {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string"
+        },
+        "example": "s_neon-tide"
+      }
+    },
+    "schemas": {
+      "Song": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "s_neon-tide"
+          },
+          "title": {
+            "type": "string",
+            "example": "Neon Tide"
+          },
+          "artist": {
+            "type": "string",
+            "example": "Aurora Drift"
+          },
+          "album": {
+            "type": "string",
+            "nullable": true,
+            "example": "City Lights"
+          },
+          "durationMs": {
+            "type": "integer",
+            "example": 32000
+          },
+          "mimeType": {
+            "type": "string",
+            "example": "audio/wav"
+          },
+          "sizeBytes": {
+            "type": "integer",
+            "example": 1411244
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "Playlist": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "p_late-night-drive"
+          },
+          "name": {
+            "type": "string",
+            "example": "Late Night Drive"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "ownerId": {
+            "type": "string",
+            "nullable": true,
+            "description": "Owner user id, or null for public/\"featured\" catalog playlists."
+          }
+        }
+      },
+      "PlaylistWithSongs": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Playlist"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "songs": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/Song"
+                }
+              }
+            }
+          }
+        ]
+      },
+      "User": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "example": "7c3a6b54-9b2e-4a1d-bf0a-9f0b2c1d3e4f"
+          },
+          "phone": {
+            "type": "string",
+            "example": "+905551112233"
+          },
+          "displayName": {
+            "type": "string",
+            "nullable": true,
+            "example": null
+          },
+          "firstName": {
+            "type": "string",
+            "nullable": true,
+            "example": "Halit"
+          },
+          "lastName": {
+            "type": "string",
+            "nullable": true,
+            "example": "Kalaycı"
+          },
+          "birthDate": {
+            "type": "string",
+            "format": "date",
+            "nullable": true,
+            "example": "1995-06-20",
+            "description": "Calendar date (YYYY-MM-DD)."
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "profileCompleted": {
+            "type": "boolean",
+            "example": false,
+            "description": "True once firstName, lastName and birthDate are all set."
+          }
+        }
+      },
+      "AuthTokens": {
+        "type": "object",
+        "properties": {
+          "accessToken": {
+            "type": "string",
+            "description": "Short-lived JWT (HS256). Send as a Bearer token."
+          },
+          "refreshToken": {
+            "type": "string",
+            "description": "Opaque, long-lived token. Exchange via /auth/refresh; rotated on use."
+          },
+          "tokenType": {
+            "type": "string",
+            "example": "Bearer"
+          },
+          "expiresIn": {
+            "type": "integer",
+            "description": "Seconds until the access token expires.",
+            "example": 900
+          }
+        }
+      },
+      "AuthSession": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/AuthTokens"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "user": {
+                "$ref": "#/components/schemas/User"
+              },
+              "firstTime": {
+                "type": "boolean",
+                "description": "True when registration is not yet complete (collect profile via /api/v1/me/update-informations).",
+                "example": true
+              }
+            }
+          }
+        ]
+      },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string",
+                "example": "NOT_FOUND"
+              },
+              "message": {
+                "type": "string",
+                "example": "Song not found"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
 }

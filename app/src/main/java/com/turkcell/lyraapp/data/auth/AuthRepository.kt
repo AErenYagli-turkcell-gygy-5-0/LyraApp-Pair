@@ -1,31 +1,26 @@
 package com.turkcell.lyraapp.data.auth
 
-/**
- * Kimlik doğrulama işlemlerinin tek soyutlama noktası.
- *
- * Backend ekibinin REST API'si henüz tanımlı olmadığından, şu an yalnızca sahte bir
- * implementasyon ([FakeAuthRepository]) ile sağlanır. Gerçek API geldiğinde yalnızca
- * implementasyon değişir; çağıran katmanlar (ör. LoginViewModel) etkilenmez.
- */
+data class OtpRequestResult(
+    val sent: Boolean,
+    val firstTime: Boolean,
+)
+
+data class OtpVerifyResult(
+    val accessToken: String,
+    val refreshToken: String,
+    val firstTime: Boolean,
+    val expiresIn: Int,
+)
+
 interface AuthRepository {
 
-    /**
-     * Verilen telefon numarası ve şifreyle giriş dener.
-     *
-     * @return Başarılıysa [Result.success], aksi halde hata mesajı taşıyan [Result.failure].
-     */
-    suspend fun login(phoneNumber: String, password: String): Result<Unit>
+    suspend fun requestOtp(phoneNumber: String): Result<OtpRequestResult>
 
-    /**
-     * Verilen kullanıcı bilgileriyle yeni bir hesap oluşturmayı dener.
-     *
-     * @return Başarılıysa [Result.success], aksi halde hata mesajı taşıyan [Result.failure].
-     */
-    suspend fun register(
+    suspend fun verifyOtp(phoneNumber: String, code: String): Result<OtpVerifyResult>
+
+    suspend fun completeProfile(
         firstName: String,
         lastName: String,
-        phoneNumber: String,
-        password: String,
+        birthDate: String,
     ): Result<Unit>
 }
-

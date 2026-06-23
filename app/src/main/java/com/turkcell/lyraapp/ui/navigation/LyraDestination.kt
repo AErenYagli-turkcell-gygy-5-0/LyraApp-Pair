@@ -1,14 +1,9 @@
 package com.turkcell.lyraapp.ui.navigation
 
-/**
- * Uygulamadaki navigasyon hedeflerinin tek doğruluk kaynağı.
- *
- * Her hedef benzersiz bir [route] string'iyle temsil edilir; [LyraNavHost] bu route'lar
- * üzerinden composable'ları bağlar. Yeni bir ekran eklendiğinde buraya bir hedef eklenir.
- */
 enum class LyraDestination(val route: String) {
     Login("login"),
-    Register("register"),
+    Otp("otp"),
+    CompleteProfile("completeprofile"),
     Home("home"),
     Search("search"),
     Library("library"),
@@ -20,3 +15,9 @@ enum class LyraDestination(val route: String) {
 }
 
 fun playlistDetailRoute(playlistId: String) = "playlistdetail/$playlistId"
+
+fun otpRoute(phoneNumber: String, firstTime: Boolean) =
+    "otp?phoneNumber=$phoneNumber&firstTime=$firstTime"
+
+fun completeProfileRoute(phoneNumber: String) =
+    "completeprofile?phoneNumber=$phoneNumber"

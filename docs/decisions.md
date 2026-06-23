@@ -282,3 +282,30 @@
 
 - Sebep: NowPlaying için argument gereksizdir çünkü PlaybackRepository Singleton'ı navigasyondan önce
   güncellenir; deep link gereksinimi bu iterasyonda kapsam dışıdır.
+
+
+### Kimlik Dogrulama — Telefon + OTP Akisi
+
+- Karar: Sifre tabanli login/register akisi kaldirildi; yerine **telefon numarasi + OTP** tabanli
+  passwordless akis getirildi. 3 adimli flow: (1) Telefon numarasi girisi, (2) OTP dogrulama,
+  (3) Bilgileri tamamla (yalnizca `firstTime` kullanicilari icin).
+
+- Son Guncelleme Tarihi: 23.06.2026
+
+- Uygulama:
+  - `AuthRepository` interface'i yeniden tanimlandi: `requestOtp(phone)`, `verifyOtp(phone, code)`,
+    `completeProfile(firstName, lastName, birthDate)`. Eski `login(phone, password)` ve `register(...)`
+    metotlari kaldirildi.
+  - `FakeAuthRepository` mock implementasyonu gecerli OTP kodlarini (`280600`, `260702`, `250506`,
+    `101000`, `346134`, `123456`) ve `firstTime` mantigini taklit eder.
+  - `AuthTokenManager` DataStore Preferences ile access + refresh token saklama/okuma saglar
+    (`lyra_auth` DataStore dosyasi).
+  - Eski `ui/auth/register/` paketi (RegisterContract, RegisterViewModel, RegisterScreen) silindi.
+  - Yeni ekranlar: `ui/auth/otp/` (OtpContract, OtpViewModel, OtpScreen) ve
+    `ui/auth/completeprofile/` (CompleteProfileContract, CompleteProfileViewModel, CompleteProfileScreen).
+  - `LyraDestination` enum'undan `Register` kaldirildi; `Otp` ve `CompleteProfile` eklendi.
+  - Navigasyon: Login -> OTP (phoneNumber + firstTime query param) -> (firstTime ise) CompleteProfile -> Home.
+
+- Sebep: Backend API sozlesmesi (`docs/api/openapi.json`) telefon + OTP akisi gerektirir; sifre tabanli
+  akis backend ile uyumsuzdu. Token yonetimi DataStore ile saglanir (mevcut tema tercihi pattern'i ile
+  tutarli).

@@ -14,12 +14,6 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-/**
- * Login ekranının MVI ViewModel'i.
- *
- * Tek giriş noktası [onIntent]'tir. Durum [uiState] üzerinden gözlemlenir; tek seferlik
- * olaylar [effect] kanalından akar.
- */
 @HiltViewModel
 class LoginViewModel @Inject constructor(
     private val authRepository: AuthRepository,
@@ -34,39 +28,42 @@ class LoginViewModel @Inject constructor(
     fun onIntent(intent: LoginIntent) {
         when (intent) {
             is LoginIntent.PhoneNumberChanged -> updateForm { it.copy(phoneNumber = intent.value) }
-            is LoginIntent.PasswordChanged -> updateForm { it.copy(password = intent.value) }
-            is LoginIntent.TogglePasswordVisibility -> _uiState.update { it.copy(isPasswordVisible = !it.isPasswordVisible) }
             is LoginIntent.Submit -> submit()
-            is LoginIntent.RegisterClicked -> viewModelScope.launch { _effect.send(LoginEffect.NavigateToRegister) }
         }
     }
 
-    /** Form alanını günceller ve giriş butonunun aktifliğini yeniden türetir. */
     private fun updateForm(transform: (LoginUiState) -> LoginUiState) {
         _uiState.update { current ->
             val updated = transform(current)
-            updated.copy(isLoginEnabled = updated.isFormValid())
+            updated.copy(isContinueEnabled = updated.isFormValid())
         }
     }
 
     private fun submit() {
         val state = _uiState.value
-        if (!state.isLoginEnabled || state.isLoading) return
+        if (!state.isContinueEnabled || state.isLoading) return
 
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
-            val result = authRepository.login(state.phoneNumber, state.password)
+            val fullNumber = "+90${state.phoneNumber.filter { c -> c.isDigit() }}"
+            val result = authRepository.requestOtp(fullNumber)
             _uiState.update { it.copy(isLoading = false) }
 
             result
-                .onSuccess { _effect.send(LoginEffect.NavigateToHome) }
+                .onSuccess { otpResult ->
+                    _effect.send(
+                        LoginEffect.NavigateToOtp(
+                            phoneNumber = fullNumber,
+                            firstTime = otpResult.firstTime,
+                        ),
+                    )
+                }
                 .onFailure { error ->
-                    _effect.send(LoginEffect.ShowError(error.message ?: "Giriş başarısız."))
+                    _effect.send(LoginEffect.ShowError(error.message ?: "Bir hata olustu."))
                 }
         }
     }
 }
 
-/** Giriş butonunun aktif olması için minimal validasyon. */
 private fun LoginUiState.isFormValid(): Boolean =
-    phoneNumber.isNotBlank() && password.isNotBlank()
+    phoneNumber.filter { it.isDigit() }.length >= 10
