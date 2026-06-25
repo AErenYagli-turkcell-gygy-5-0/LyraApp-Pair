@@ -6,14 +6,13 @@
 
 ### Dependency Injection Kütüphanesi
 
-- Seçim*: **Hilt**
+- Seçim\*: **Hilt**
 
-- Son Güncelleme Tarihi*: 04.06.2026
+- Son Güncelleme Tarihi\*: 04.06.2026
 
 - Alternatifler: **Koin**
 
 - Sebep: **Opsiyonel**
-
 
 ### Navigasyon
 
@@ -28,7 +27,6 @@
   (bkz. [architecture/mvi-viewmodel-rules.md](architecture/mvi-viewmodel-rules.md) §6); navigasyon
   `Intent → Effect` üzerinden akar, `Route` Effect'i tüketip `NavHost`'tan gelen lambda'ları çağırır.
 
-
 ### Sunum Katmanı Mimarisi
 
 - Seçim: **MVI (Model-View-Intent)**
@@ -39,7 +37,6 @@
   referans implementasyon (Login) için bkz. [architecture/mvi-overview.md](architecture/mvi-overview.md).
 
 - Sebep: Tek yönlü veri akışı, durumsuz UI, test edilebilirlik.
-
 
 ### Hilt Annotation Processing
 
@@ -54,7 +51,6 @@
 
 - Sebep: KSP, kapt'a göre belirgin biçimde hızlıdır ve Kotlin 2.2 ile uyumludur.
 
-
 ### AGP 9 Built-in Kotlin + KSP Uyumu
 
 - Karar: `gradle.properties` içinde **`android.disallowKotlinSourceSets=false`** zorunludur.
@@ -63,7 +59,6 @@
 
 - Sebep: AGP 9 built-in Kotlin kullanır; KSP'nin ürettiği kaynak dizinlerini eklemesi bu bayrak
   olmadan derlemeyi kırar. Bayrak deneysel (experimental) olarak işaretlidir ancak gereklidir.
-
 
 ### Alt Gezinme Çubuğu (Bottom Navigation Bar)
 
@@ -86,7 +81,6 @@
 - Sebep: Tek doğruluk kaynağı (back stack) ile durum tekrarına yer bırakmaz; sekme başına ayrı
   `NavHost`/ViewModel karmaşıklığından kaçınılır; mevcut Auth grafiği değişmeden korunur.
 
-
 ### Backend Hazır Değilken Veri Katmanı
 
 - Karar: **Stub repository** deseni — Repository interface + `Fake<X>Repository` implementasyonu.
@@ -95,7 +89,6 @@
 
 - Sebep: Backend REST API sözleşmesi tanımlı değil (`agents.md` §2.2 uydurmak yasak). Gerçek API
   geldiğinde yalnızca implementasyon ve DI bağlaması değişir; ViewModel/Contract etkilenmez.
-
 
 ### Arama Ekranı Veri Katmanı
 
@@ -107,7 +100,6 @@
 - Sebep: Arama sorgusu bu iterasyonda yalnızca yerel state'te tutulur (backend yok); ağ araması
   ileriki iterasyona bırakılır.
 
-
 ### Kütüphane Ekranı Veri Katmanı
 
 - Karar: `data/library/LibraryRepository` + `MockLibraryRepository`. `LibraryPlaylist.isLikedSongs`
@@ -118,7 +110,6 @@
 
 - Sebep: Sanatçılar ve Albümler sekmeleri bu iterasyonda backend gerektirmez; tab seçimi yalnızca
   yerel state değişikliği olarak uygulanır.
-
 
 ### Beğenilen Şarkılar Ekranı — Favoriler Sekmesi Olarak
 
@@ -134,7 +125,6 @@
 
   `onBack = {}` no-op: Favoriler üst düzey sekmede geri navigasyona gerek yoktur. İleride detay
   ekranına taşınırsa bu bağlama özel bir `LikedSongs("liked_songs")` rotası eklenebilir.
-
 
 ### Tema Tercihi Kalıcı Saklama
 
@@ -153,7 +143,6 @@
   DataStore Session tutmak yerine Activity katmanında toplanmasının nedeni: tema uygulama geneli bir
   shell kararı olup UI katmanlarının ötesinde Activity lifecycle'a bağlıdır.
 
-
 ### Profil Ekranı Veri Katmanı
 
 - Karar: `data/profile/ProfileRepository` + `MockProfileRepository`. `SettingItem.id` string anahtar
@@ -164,7 +153,6 @@
 
 - Sebep: Ayar navigasyonu bu iterasyonda kapsam dışı; `SettingClicked` Intent kaydedilmiş ancak
   Effect üretmiyor. Gerçek API geldiğinde navigasyon hedefleri Intent dallarına eklenir.
-
 
 ### Paylaşılan Oynatma State'i (Shared Playback State)
 
@@ -182,7 +170,6 @@
 - Sebep: `agents.md §2.2` gereği uydurma yasak; tek doğruluk kaynağı repository katmanında tutulur.
   ViewModel'lar arası doğrudan iletişim MVI sözleşmesini bozar.
 
-
 ### Mini Player Entegrasyonu
 
 - Karar: `MiniPlayer` composable'ı `LyraNavHost` içindeki dış `Scaffold.bottomBar` bloğuna, `LyraBottomBar`'ın
@@ -198,7 +185,6 @@
 
 - Sebep: Mini player bir chrome bileşeni olup feature ekranı değildir; kendi MVI State/Intent/Effect
   sözleşmesi `PlayerContract.kt`'de tanımlıdır ancak bottom bar ile aynı layout katmanında yönetilir.
-
 
 ### Ag Katmani — Retrofit + Moshi
 
@@ -218,7 +204,6 @@
 
 - Sebep: Retrofit ekosistemi Android'de olgun ve Hilt ile sorunsuz entegre olur. Moshi,
   Kotlin null-safety'yi Gson'dan daha iyi yönetir; codegen gerektirmez.
-
 
 ### Ses Oynatımı — ExoPlayer (Media3)
 
@@ -241,30 +226,45 @@
 - Sebep: `agents.md §2.2` gereği uydurma yasak; gerçek ses oynatımı için platform standardı olan
   Media3/ExoPlayer seçildi. Arayüz sabit kaldığından ViewModel ve UI katmanları etkilenmedi.
 
-
 ### Arka Plan Ses Oynatimi — MediaSessionService
 
 - Karar: **Media3 MediaSessionService** ile foreground service + bildirim entegrasyonu.
 
-- Son Guncelleme Tarihi: 20.06.2026
+- Son Guncelleme Tarihi: 24.06.2026
 
-- Uygulama: `PlaybackService` (`data/playback/`) `MediaSessionService` extends eder. ExoPlayer
-  `ExoPlayerPlaybackRepository` singleton'inda kalir; servis ayni instance'i `ForwardingPlayer`
-  ile sarmalayarak `MediaSession` olusturur. `ForwardingPlayer`, bildirimden gelen next/previous
-  komutlarini repository'nin kuyruk yonetimine delege eder. Bildirim otomatik olarak Media3
-  tarafindan yonetilir (play/pause, onceki, sonraki kontrolleri). Begeni butonu `SessionCommand`
-  custom komutu ile bildirime eklenir ve like state degistikce ikon guncellenir. Gradient album
-  kapagi `MediaMetadata.artworkData` olarak set edilir (128x128 bitmap, repository tarafindan
-  uretilir). `POST_NOTIFICATIONS` runtime izni `MainActivity` icinde istenir (API 33+).
+- Uygulama: `PlaybackService` (`data/playback/`) `MediaSessionService` extends eder ve `ExoPlayer`
+  instance'inin sahibidir. Player servisin `onCreate()` metodunda olusturulur, repository'ye
+  baglanir ve `onDestroy()` sirasinda repository'den ayrilarak serbest birakilir.
+  `ExoPlayerPlaybackRepository`, stream URL ve `MediaMetadata` hazir olduktan sonra servisi
+  baslatir; servis-player baglantisi hazir olana kadar sinirli sure bekler. `ForwardingPlayer`,
+  bildirimden gelen next/previous komutlarini repository'nin kuyruk yonetimine delege eder.
+  Bildirim Media3 tarafindan otomatik yonetilir (play/pause, onceki, sonraki kontrolleri).
+  Begeni butonu `SessionCommand` ve `setMediaButtonPreferences()` ile bildirime eklenir; like
+  state degistikce ikon guncellenir. Gradient album kapagi `MediaMetadata.artworkData` olarak
+  set edilir (128x128 bitmap, repository tarafindan uretilir). `POST_NOTIFICATIONS` runtime
+  izni `MainActivity` icinde istenir (API 33+).
+
+- Bildirim guvenilirligi: Media3 1.5.1'in dahili bildirim controller'i, servis ile player ayni
+  anda baslatildiginda ilk playback event'lerini kacirabildigi icin servis foreground'a
+  gecemeyebilir. `PlaybackService`, platform `Notification.MediaStyle` bildirimini MediaSession
+  token'i ile dogrudan yayinlar ve oynatma basladiginda `ServiceCompat.startForeground()` cagirir.
+  Onceki, oynat/duraklat, sonraki ve begeni aksiyonlari explicit service `PendingIntent`'leri ile
+  ayni repository komutlarina delege edilir. Boylece sistem mini player'i MediaSession metadata
+  ve ilerleme bilgisini kullanmaya devam ederken foreground servis zaman asimi engellenir.
+
+- Task kapatma davranisi: Kullanici LyraApp'i son uygulamalar ekranindan yukari kaydirarak
+  kaldirdiginda `PlaybackService.onTaskRemoved()` oynaticiyi durdurur, media item'lari temizler,
+  foreground bildirimini kaldirir ve servisi sonlandirir. Home ile uygulamayi yalnizca arka plana
+  gondermek task'i kaldirmadigi icin oynatma ve bildirim devam eder.
 
 - Bagimliliklar: `media3-session:1.5.1` (yeni), `FOREGROUND_SERVICE`,
   `FOREGROUND_SERVICE_MEDIA_PLAYBACK`, `POST_NOTIFICATIONS` izinleri.
 
 - Sebep: Media3 `MediaSessionService` Android'in resmi arka plan ses oynatimi cozumudur; foreground
-  service, bildirim ve kilit ekrani kontrollerini tek bir API ile yonetir. ExoPlayer'in service'e
-  tasinmasi yerine repository'de birakilmasi tercih edildi cunku mevcut kuyruk yonetimi ve state
-  akisi minimal degisiklikle korunur. ViewModel ve UI katmanlari etkilenmedi.
-
+  service, bildirim ve kilit ekrani kontrollerini tek bir API ile yonetir. Player ve MediaSession'in
+  ayni servis yasam dongusunde tutulmasi, arka plan oynatiminin Activity ve repository yasam
+  dongulerinden bagimsiz olmasini ve kaynaklarin deterministik olarak serbest birakilmasini saglar.
+  ViewModel ve UI katmanlari etkilenmedi.
 
 ### Yeni Ekranlar ve Rota Argumentleri
 
@@ -282,7 +282,6 @@
 
 - Sebep: NowPlaying için argument gereksizdir çünkü PlaybackRepository Singleton'ı navigasyondan önce
   güncellenir; deep link gereksinimi bu iterasyonda kapsam dışıdır.
-
 
 ### Ana Sayfa — Gercek API Entegrasyonu
 
@@ -307,7 +306,6 @@
 
 - Sebep: Backend API (`docs/api/openapi.json`) hazir; `/me/*` endpoint'leri JWT Bearer token gerektirir.
   Tek domain modeli (`HomeSong`) API'nin 3 endpoint icin ayni Song semasini kullanmasini yansitir.
-
 
 ### Kimlik Dogrulama — Telefon + OTP Akisi
 

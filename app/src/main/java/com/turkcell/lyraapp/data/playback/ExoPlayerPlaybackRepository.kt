@@ -7,7 +7,7 @@ import android.graphics.Canvas
 import android.graphics.LinearGradient
 import android.graphics.Paint
 import android.graphics.Shader
-import android.os.Looper
+import androidx.core.content.ContextCompat
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Player
@@ -18,6 +18,7 @@ import com.turkcell.lyraapp.data.remote.SongApiService
 import com.turkcell.lyraapp.data.remote.dto.RecordPlayBodyDto
 import java.io.ByteArrayOutputStream
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -30,6 +31,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -43,10 +45,11 @@ class ExoPlayerPlaybackRepository @Inject constructor(
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
-    // ExoPlayer'ın main looper üzerinde çalışması için Looper.getMainLooper() verilir.
-    internal val player: ExoPlayer = ExoPlayer.Builder(context)
-        .setLooper(Looper.getMainLooper())
-        .build()
+    @Volatile
+    private var player: ExoPlayer? = null
+
+    @Volatile
+    private var playerReady = CompletableDeferred<ExoPlayer>()
 
     private val _playbackState = MutableStateFlow(PlaybackState())
     override val playbackState: StateFlow<PlaybackState> = _playbackState.asStateFlow()
@@ -54,20 +57,37 @@ class ExoPlayerPlaybackRepository @Inject constructor(
     private val queue = mutableListOf<Song>()
     private var queueIndex = -1
     private var progressJob: Job? = null
+    private var currentMediaItem: MediaItem? = null
 
-    init {
-        player.addListener(object : Player.Listener {
-            override fun onIsPlayingChanged(isPlaying: Boolean) {
-                _playbackState.update { it.copy(isPlaying = isPlaying) }
-                if (isPlaying) startProgressTicker() else stopProgressTicker()
-            }
+    private val playerListener = object : Player.Listener {
+        override fun onIsPlayingChanged(isPlaying: Boolean) {
+            _playbackState.update { it.copy(isPlaying = isPlaying) }
+            if (isPlaying) startProgressTicker() else stopProgressTicker()
+        }
 
-            override fun onPlaybackStateChanged(playbackState: Int) {
-                if (playbackState == Player.STATE_ENDED) {
-                    scope.launch { handlePlaybackEnded() }
-                }
+        override fun onPlaybackStateChanged(playbackState: Int) {
+            if (playbackState == Player.STATE_ENDED) {
+                scope.launch { handlePlaybackEnded() }
             }
-        })
+        }
+    }
+
+    internal fun attachPlayer(attachedPlayer: ExoPlayer) {
+        player?.removeListener(playerListener)
+        player = attachedPlayer
+        attachedPlayer.addListener(playerListener)
+        if (!playerReady.isCompleted) {
+            playerReady.complete(attachedPlayer)
+        }
+    }
+
+    internal fun detachPlayer(detachedPlayer: ExoPlayer) {
+        if (player !== detachedPlayer) return
+        stopProgressTicker()
+        detachedPlayer.removeListener(playerListener)
+        player = null
+        playerReady = CompletableDeferred()
+        _playbackState.update { it.copy(isPlaying = false) }
     }
 
     override suspend fun playSong(song: Song) {
@@ -82,12 +102,20 @@ class ExoPlayerPlaybackRepository @Inject constructor(
     }
 
     override suspend fun pause() {
-        withContext(Dispatchers.Main) { player.pause() }
+        withContext(Dispatchers.Main) { player?.pause() }
     }
 
     override suspend fun resume() {
         if (_playbackState.value.currentSong == null) return
-        withContext(Dispatchers.Main) { player.play() }
+        val mediaItem = currentMediaItem ?: return
+        val activePlayer = getOrStartPlayer()
+        withContext(Dispatchers.Main) {
+            if (activePlayer.mediaItemCount == 0) {
+                activePlayer.setMediaItem(mediaItem)
+                activePlayer.prepare()
+            }
+            activePlayer.play()
+        }
     }
 
     override suspend fun next() {
@@ -98,9 +126,9 @@ class ExoPlayerPlaybackRepository @Inject constructor(
 
     override suspend fun previous() {
         if (queue.isEmpty()) return
-        val positionMs = withContext(Dispatchers.Main) { player.currentPosition }
+        val positionMs = withContext(Dispatchers.Main) { player?.currentPosition ?: 0L }
         if (positionMs > RESTART_THRESHOLD_MS) {
-            withContext(Dispatchers.Main) { player.seekTo(0L) }
+            withContext(Dispatchers.Main) { player?.seekTo(0L) }
         } else {
             queueIndex = if (queueIndex <= 0) queue.lastIndex else queueIndex - 1
             loadAndPlay(queue[queueIndex])
@@ -120,10 +148,11 @@ class ExoPlayerPlaybackRepository @Inject constructor(
     }
 
     override suspend fun seekTo(progress: Float) {
-        val durationMs = withContext(Dispatchers.Main) { player.duration }
+        val activePlayer = player ?: return
+        val durationMs = withContext(Dispatchers.Main) { activePlayer.duration }
         if (durationMs <= 0L) return
         val targetMs = (progress * durationMs).toLong()
-        withContext(Dispatchers.Main) { player.seekTo(targetMs) }
+        withContext(Dispatchers.Main) { activePlayer.seekTo(targetMs) }
         _playbackState.update {
             it.copy(progress = progress, currentPositionLabel = formatMs(targetMs))
         }
@@ -138,10 +167,6 @@ class ExoPlayerPlaybackRepository @Inject constructor(
                 currentPositionLabel = "0:00",
             )
         }
-        androidx.core.content.ContextCompat.startForegroundService(
-            context,
-            Intent(context, PlaybackService::class.java),
-        )
         try {
             val url = withContext(Dispatchers.IO) {
                 songApiService.getStreamUrl(song.id).data.url
@@ -161,10 +186,12 @@ class ExoPlayerPlaybackRepository @Inject constructor(
                         .build(),
                 )
                 .build()
+            currentMediaItem = mediaItem
+            val activePlayer = getOrStartPlayer()
             withContext(Dispatchers.Main) {
-                player.setMediaItem(mediaItem)
-                player.prepare()
-                player.play()
+                activePlayer.setMediaItem(mediaItem)
+                activePlayer.prepare()
+                activePlayer.play()
             }
             withContext(Dispatchers.IO) {
                 runCatching { homeApiService.recordPlay(RecordPlayBodyDto(song.id)) }
@@ -178,8 +205,8 @@ class ExoPlayerPlaybackRepository @Inject constructor(
         if (_playbackState.value.isRepeat) {
             scope.launch {
                 withContext(Dispatchers.Main) {
-                    player.seekTo(0L)
-                    player.play()
+                    player?.seekTo(0L)
+                    player?.play()
                 }
             }
         } else {
@@ -192,8 +219,9 @@ class ExoPlayerPlaybackRepository @Inject constructor(
         progressJob = scope.launch {
             while (isActive) {
                 delay(PROGRESS_INTERVAL_MS)
-                val durationMs = player.duration
-                val positionMs = player.currentPosition
+                val activePlayer = player ?: break
+                val durationMs = activePlayer.duration
+                val positionMs = activePlayer.currentPosition
                 if (durationMs > 0L) {
                     _playbackState.update {
                         it.copy(
@@ -209,6 +237,17 @@ class ExoPlayerPlaybackRepository @Inject constructor(
     private fun stopProgressTicker() {
         progressJob?.cancel()
         progressJob = null
+    }
+
+    private suspend fun getOrStartPlayer(): ExoPlayer {
+        player?.let { return it }
+        ContextCompat.startForegroundService(
+            context,
+            Intent(context, PlaybackService::class.java),
+        )
+        return withTimeout(PLAYER_START_TIMEOUT_MS) {
+            playerReady.await()
+        }
     }
 
     private fun formatMs(ms: Long): String {
@@ -237,5 +276,6 @@ class ExoPlayerPlaybackRepository @Inject constructor(
     private companion object {
         const val PROGRESS_INTERVAL_MS = 500L
         const val RESTART_THRESHOLD_MS = 3_000L
+        const val PLAYER_START_TIMEOUT_MS = 5_000L
     }
 }
