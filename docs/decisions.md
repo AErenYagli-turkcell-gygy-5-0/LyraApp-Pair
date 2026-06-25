@@ -266,6 +266,41 @@
   dongulerinden bagimsiz olmasini ve kaynaklarin deterministik olarak serbest birakilmasini saglar.
   ViewModel ve UI katmanlari etkilenmedi.
 
+### Sarki Indirme ve Offline Calma
+
+- Karar: **Room Database** + **OkHttp coroutine indirici** ile offline calma destegi.
+
+- Son Guncelleme Tarihi: 25.06.2026
+
+- Uygulama:
+  - `data/download/DownloadedSongEntity.kt` — Room entity (songId PK, title, artist, localPath,
+    mimeType, fileSize, downloadedAt).
+  - `data/download/DownloadedSongDao.kt` — CRUD + `existsBySongId(): Flow<Boolean>` reaktif sorgu.
+  - `data/download/LyraDatabase.kt` — Room database (version 1, tek entity).
+  - `data/download/DownloadRepository.kt` — Interface: downloadSong, deleteDownload, isDownloaded,
+    getLocalPath, activeDownloadStatus (StateFlow).
+  - `data/download/RealDownloadRepository.kt` — Impl: stream-url mint et → OkHttp ile bayt bayt
+    indir (ilerleme bildir) → app-specific filesDir/downloads/ altina kaydet → Room'a yaz.
+    Yarim kalan indirmeler `.tmp` uzantisiyla yazilir, tamamlaninca rename edilir.
+  - `di/DatabaseModule.kt` — Room database + DAO Hilt provision.
+  - `di/DownloadModule.kt` — DownloadRepository bind.
+  - `NowPlayingContract` — `DownloadStatus` sealed interface (NotDownloaded / Downloading(progress) /
+    Downloaded / Error) state'e eklendi; DownloadClicked + RemoveDownloadClicked Intent'leri ve
+    ShowSnackbar Effect'i tanimlandi.
+  - `NowPlayingViewModel` — DownloadRepository inject, sarki degisince download durumu observe et,
+    indirme/kaldirma intent islemesi.
+  - `NowPlayingScreen` — SongInfo satirina DownloadButton composable'i eklendi (4 durum: ikon,
+    CircularProgressIndicator, onay ikonu, hata ikonu). SnackbarHost entegrasyonu.
+  - `ExoPlayerPlaybackRepository.loadAndPlay()` — Calma oncesi `downloadRepository.getLocalPath()`
+    kontrol eder; dosya varsa yerel URI'den calar, yoksa stream-url'den calar.
+
+- Bagimliliklar: `room-runtime:2.7.1`, `room-ktx:2.7.1`, `room-compiler:2.7.1` (KSP).
+
+- Sebep: Room, SQLite uzerinde type-safe reactive (Flow) erisim saglar; DataStore key-value icin
+  uygundur ancak iliskisel sorgu (songId bazli lookup, tarih bazli siralama) gerektiginde yetersiz
+  kalir. OkHttp zaten projede mevcut oldugu icin ek indirme kutuphanesi (DownloadManager vs.)
+  gereksizdir. Dosyalar app-specific storage'a kaydedilir — ek izin gerektirmez.
+
 ### Yeni Ekranlar ve Rota Argumentleri
 
 - Karar: `PlaylistDetail`, `NowPlaying`, `CreatePlaylist` rotaları `LyraDestination` enum'una eklendi.

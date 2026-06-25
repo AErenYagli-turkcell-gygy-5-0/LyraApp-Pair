@@ -15,21 +15,27 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.PathParser
 import androidx.compose.ui.text.font.FontWeight
@@ -38,6 +44,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.turkcell.lyraapp.data.download.DownloadStatus
 import com.turkcell.lyraapp.data.playback.Song
 import com.turkcell.lyraapp.ui.icons.LyraIcons
 import com.turkcell.lyraapp.ui.theme.LyraAppTheme
@@ -49,11 +56,13 @@ fun NowPlayingRoute(
     viewModel: NowPlayingViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(Unit) {
         viewModel.effect.collect { effect ->
             when (effect) {
                 is NowPlayingEffect.Collapse -> onCollapse()
+                is NowPlayingEffect.ShowSnackbar -> snackbarHostState.showSnackbar(effect.message)
             }
         }
     }
@@ -61,6 +70,7 @@ fun NowPlayingRoute(
     NowPlayingScreen(
         state = uiState,
         onIntent = viewModel::onIntent,
+        snackbarHostState = snackbarHostState,
         modifier = modifier,
     )
 }
@@ -70,71 +80,82 @@ fun NowPlayingScreen(
     state: NowPlayingUiState,
     onIntent: (NowPlayingIntent) -> Unit,
     modifier: Modifier = Modifier,
+    snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
 ) {
     val song = state.currentSong
     val bgStart = if (song != null) Color(song.artworkStartColor).copy(alpha = 0.85f) else Color(0xFF3A2010)
     val bgEnd = Color(0xFF121212)
 
-    Box(
-        modifier = modifier
-            .fillMaxSize()
-            .background(Brush.verticalGradient(listOf(bgStart, bgEnd))),
-    ) {
-        Column(
+    Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+        containerColor = Color.Transparent,
+        modifier = modifier,
+    ) { innerPadding ->
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .statusBarsPadding()
-                .padding(horizontal = 24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
+                .background(Brush.verticalGradient(listOf(bgStart, bgEnd)))
+                .padding(innerPadding),
         ) {
-            Spacer(Modifier.height(12.dp))
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .statusBarsPadding()
+                    .padding(horizontal = 24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Spacer(Modifier.height(12.dp))
 
-            TopBar(
-                sourceName = state.sourceName,
-                onCollapse = { onIntent(NowPlayingIntent.CollapseClicked) },
-            )
+                TopBar(
+                    sourceName = state.sourceName,
+                    onCollapse = { onIntent(NowPlayingIntent.CollapseClicked) },
+                )
 
-            Spacer(Modifier.height(32.dp))
+                Spacer(Modifier.height(32.dp))
 
-            Artwork(
-                startColor = song?.artworkStartColor ?: 0xFFD98E4A,
-                endColor = song?.artworkEndColor ?: 0xFF8A5526,
-            )
+                Artwork(
+                    startColor = song?.artworkStartColor ?: 0xFFD98E4A,
+                    endColor = song?.artworkEndColor ?: 0xFF8A5526,
+                )
 
-            Spacer(Modifier.height(32.dp))
+                Spacer(Modifier.height(32.dp))
 
-            SongInfo(
-                title = song?.title ?: "",
-                artist = song?.artist ?: "",
-                isLiked = state.isLiked,
-                onLike = { onIntent(NowPlayingIntent.LikeClicked) },
-            )
+                SongInfo(
+                    title = song?.title ?: "",
+                    artist = song?.artist ?: "",
+                    isLiked = state.isLiked,
+                    downloadStatus = state.downloadStatus,
+                    onLike = { onIntent(NowPlayingIntent.LikeClicked) },
+                    onDownload = { onIntent(NowPlayingIntent.DownloadClicked) },
+                    onRemoveDownload = { onIntent(NowPlayingIntent.RemoveDownloadClicked) },
+                )
 
-            Spacer(Modifier.height(24.dp))
+                Spacer(Modifier.height(24.dp))
 
-            SeekBar(
-                progress = state.progress,
-                currentLabel = state.currentPositionLabel,
-                totalLabel = song?.duration ?: "0:00",
-                onSeek = { onIntent(NowPlayingIntent.SeekTo(it)) },
-            )
+                SeekBar(
+                    progress = state.progress,
+                    currentLabel = state.currentPositionLabel,
+                    totalLabel = song?.duration ?: "0:00",
+                    onSeek = { onIntent(NowPlayingIntent.SeekTo(it)) },
+                )
 
-            Spacer(Modifier.height(20.dp))
+                Spacer(Modifier.height(20.dp))
 
-            Controls(
-                isPlaying = state.isPlaying,
-                isShuffle = state.isShuffle,
-                isRepeat = state.isRepeat,
-                onPlayPause = { onIntent(NowPlayingIntent.PlayPauseClicked) },
-                onNext = { onIntent(NowPlayingIntent.NextClicked) },
-                onPrevious = { onIntent(NowPlayingIntent.PreviousClicked) },
-                onShuffle = { onIntent(NowPlayingIntent.ShuffleClicked) },
-                onRepeat = { onIntent(NowPlayingIntent.RepeatClicked) },
-            )
+                Controls(
+                    isPlaying = state.isPlaying,
+                    isShuffle = state.isShuffle,
+                    isRepeat = state.isRepeat,
+                    onPlayPause = { onIntent(NowPlayingIntent.PlayPauseClicked) },
+                    onNext = { onIntent(NowPlayingIntent.NextClicked) },
+                    onPrevious = { onIntent(NowPlayingIntent.PreviousClicked) },
+                    onShuffle = { onIntent(NowPlayingIntent.ShuffleClicked) },
+                    onRepeat = { onIntent(NowPlayingIntent.RepeatClicked) },
+                )
 
-            Spacer(Modifier.height(24.dp))
+                Spacer(Modifier.height(24.dp))
 
-            BottomActions()
+                BottomActions()
+            }
         }
     }
 }
@@ -208,7 +229,10 @@ private fun SongInfo(
     title: String,
     artist: String,
     isLiked: Boolean,
+    downloadStatus: DownloadStatus,
     onLike: () -> Unit,
+    onDownload: () -> Unit,
+    onRemoveDownload: () -> Unit,
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -227,6 +251,13 @@ private fun SongInfo(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
+
+        DownloadButton(
+            status = downloadStatus,
+            onDownload = onDownload,
+            onRemoveDownload = onRemoveDownload,
+        )
+
         IconButton(onClick = onLike) {
             Icon(
                 imageVector = if (isLiked) LyraIcons.Favorite else LyraIcons.FavoriteOutlined,
@@ -234,6 +265,60 @@ private fun SongInfo(
                 tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(28.dp),
             )
+        }
+    }
+}
+
+@Composable
+private fun DownloadButton(
+    status: DownloadStatus,
+    onDownload: () -> Unit,
+    onRemoveDownload: () -> Unit,
+) {
+    when (status) {
+        is DownloadStatus.NotDownloaded -> {
+            IconButton(onClick = onDownload) {
+                Icon(
+                    imageVector = LyraIcons.Download,
+                    contentDescription = "İndir",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(24.dp),
+                )
+            }
+        }
+
+        is DownloadStatus.Downloading -> {
+            IconButton(onClick = {}, enabled = false) {
+                CircularProgressIndicator(
+                    progress = { status.progress },
+                    modifier = Modifier.size(22.dp),
+                    color = MaterialTheme.colorScheme.primary,
+                    strokeWidth = 2.5.dp,
+                    strokeCap = StrokeCap.Round,
+                )
+            }
+        }
+
+        is DownloadStatus.Downloaded -> {
+            IconButton(onClick = onRemoveDownload) {
+                Icon(
+                    imageVector = LyraIcons.Check,
+                    contentDescription = "İndirildi",
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(24.dp),
+                )
+            }
+        }
+
+        is DownloadStatus.Error -> {
+            IconButton(onClick = onDownload) {
+                Icon(
+                    imageVector = LyraIcons.Download,
+                    contentDescription = "Tekrar indir",
+                    tint = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.size(24.dp),
+                )
+            }
         }
     }
 }
@@ -460,6 +545,7 @@ private val previewState = NowPlayingUiState(
     isLiked = true,
     progress = 0.41f,
     currentPositionLabel = "1:33",
+    downloadStatus = DownloadStatus.NotDownloaded,
 )
 
 @Preview(name = "NowPlaying - Dark", showBackground = true, showSystemUi = true)
@@ -475,5 +561,27 @@ private fun NowPlayingDarkPreview() {
 private fun NowPlayingLightPreview() {
     LyraAppTheme(darkTheme = false) {
         NowPlayingScreen(state = previewState.copy(isPlaying = false), onIntent = {})
+    }
+}
+
+@Preview(name = "NowPlaying - Downloading", showBackground = true, showSystemUi = true)
+@Composable
+private fun NowPlayingDownloadingPreview() {
+    LyraAppTheme(darkTheme = true) {
+        NowPlayingScreen(
+            state = previewState.copy(downloadStatus = DownloadStatus.Downloading(0.6f)),
+            onIntent = {},
+        )
+    }
+}
+
+@Preview(name = "NowPlaying - Downloaded", showBackground = true, showSystemUi = true)
+@Composable
+private fun NowPlayingDownloadedPreview() {
+    LyraAppTheme(darkTheme = true) {
+        NowPlayingScreen(
+            state = previewState.copy(downloadStatus = DownloadStatus.Downloaded),
+            onIntent = {},
+        )
     }
 }

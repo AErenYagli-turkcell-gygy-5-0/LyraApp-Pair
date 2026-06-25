@@ -13,6 +13,7 @@ import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
+import com.turkcell.lyraapp.data.download.DownloadRepository
 import com.turkcell.lyraapp.data.remote.HomeApiService
 import com.turkcell.lyraapp.data.remote.SongApiService
 import com.turkcell.lyraapp.data.remote.dto.RecordPlayBodyDto
@@ -41,6 +42,7 @@ class ExoPlayerPlaybackRepository @Inject constructor(
     @ApplicationContext private val context: Context,
     private val songApiService: SongApiService,
     private val homeApiService: HomeApiService,
+    private val downloadRepository: DownloadRepository,
 ) : PlaybackRepository {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
@@ -159,6 +161,10 @@ class ExoPlayerPlaybackRepository @Inject constructor(
     }
 
     private suspend fun loadAndPlay(song: Song) {
+        withContext(Dispatchers.Main) {
+            player?.stop()
+            player?.clearMediaItems()
+        }
         _playbackState.update {
             it.copy(
                 currentSong = song,
@@ -168,8 +174,15 @@ class ExoPlayerPlaybackRepository @Inject constructor(
             )
         }
         try {
-            val url = withContext(Dispatchers.IO) {
-                songApiService.getStreamUrl(song.id).data.url
+            val localPath = withContext(Dispatchers.IO) {
+                downloadRepository.getLocalPath(song.id)
+            }
+            val uri = if (localPath != null) {
+                android.net.Uri.fromFile(java.io.File(localPath)).toString()
+            } else {
+                withContext(Dispatchers.IO) {
+                    songApiService.getStreamUrl(song.id).data.url
+                }
             }
             val artworkBytes = generateGradientArtwork(
                 song.artworkStartColor.toInt(),
@@ -177,7 +190,7 @@ class ExoPlayerPlaybackRepository @Inject constructor(
             )
             val mediaItem = MediaItem.Builder()
                 .setMediaId(song.id)
-                .setUri(url)
+                .setUri(uri)
                 .setMediaMetadata(
                     MediaMetadata.Builder()
                         .setTitle(song.title)
