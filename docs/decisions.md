@@ -318,6 +318,29 @@
 - Sebep: NowPlaying için argument gereksizdir çünkü PlaybackRepository Singleton'ı navigasyondan önce
   güncellenir; deep link gereksinimi bu iterasyonda kapsam dışıdır.
 
+### Ana Sayfa — Indirilenler Bolumu
+
+- Karar: Home ekranina "Indirilenler" bolumu eklendi. Veri tamamen yerel Room veritabanindan
+  (`DownloadedSongDao.getAll()`) reaktif Flow ile okunur; yeni endpoint kullanilmaz.
+
+- Son Guncelleme Tarihi: 25.06.2026
+
+- Uygulama:
+  - `DownloadRepository` interface'ine `getDownloadedSongs(): Flow<List<DownloadedSongEntity>>`
+    eklendi. `RealDownloadRepository` implementasyonu her emisyonda dosya varligini dogrular;
+    silinmis dosyalarin Room kayitlarini temizler.
+  - `HomeUiState`'e `downloadedSongs: List<HomeSong>` alani eklendi.
+  - `HomeViewModel` init blogundan `downloadRepository.getDownloadedSongs()` Flow'unu observe eder;
+    `DownloadedSongEntity` → `HomeSong` donusumu `HomeSong.fromDownloaded()` companion factory
+    metodu ile yapilir (artwork renkleri `artworkColorsFor()` ile deterministik uretilir).
+  - `HomeScreen` LazyColumn'a "Indirilenler" baslikli yatay liste bolumu eklendi (ForYouGrid ile
+    Son calinanlar arasinda). Her kart gradient kapak + download rozeti tasir. Bos ise bolum gizli.
+  - Mevcut `HomeIntent.SongClicked` yeniden kullanildi — `ExoPlayerPlaybackRepository.loadAndPlay()`
+    zaten `getLocalPath()` kontrolu yaparak indirilmis sarkilari yerel dosyadan calar.
+
+- Sebep: Indirilmis sarkilara hizli erisim saglamak icin ana sayfada reaktif bolum olusturuldu.
+  Ayri bir intent gereksiz cunku playback katmani yerel/remote ayrimi kendisi yonetir.
+
 ### Ana Sayfa — Gercek API Entegrasyonu
 
 - Karar: Home ekrani 3 gercek endpoint ile beslenir: `GET /me/recently-played`, `GET /me/for-you`,

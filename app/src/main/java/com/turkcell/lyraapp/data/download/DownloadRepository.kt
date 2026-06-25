@@ -22,4 +22,6 @@ interface DownloadRepository {
     fun isDownloaded(songId: String): Flow<Boolean>
 
     suspend fun getLocalPath(songId: String): String?
+
+    fun getDownloadedSongs(): Flow<List<DownloadedSongEntity>>
 }

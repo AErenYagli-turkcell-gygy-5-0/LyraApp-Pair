@@ -11,6 +11,7 @@ data class HomeUiState(
     val forYouSongs: List<HomeSong> = emptyList(),
     val recentlyPlayedSongs: List<HomeSong> = emptyList(),
     val recommendationSongs: List<HomeSong> = emptyList(),
+    val downloadedSongs: List<HomeSong> = emptyList(),
 )
 
 sealed interface HomeIntent {

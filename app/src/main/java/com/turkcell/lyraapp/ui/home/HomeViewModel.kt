@@ -2,6 +2,7 @@ package com.turkcell.lyraapp.ui.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.turkcell.lyraapp.data.download.DownloadRepository
 import com.turkcell.lyraapp.data.home.HomeRepository
 import com.turkcell.lyraapp.data.home.HomeSong
 import com.turkcell.lyraapp.data.playback.PlaybackRepository
@@ -24,6 +25,7 @@ class HomeViewModel @Inject constructor(
     private val homeRepository: HomeRepository,
     private val themePreferenceRepository: ThemePreferenceRepository,
     private val playbackRepository: PlaybackRepository,
+    private val downloadRepository: DownloadRepository,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HomeUiState(greeting = greetingForNow()))
@@ -37,6 +39,14 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             themePreferenceRepository.isDarkTheme.collect { isDark ->
                 _uiState.update { it.copy(isDarkTheme = isDark) }
+            }
+        }
+        viewModelScope.launch {
+            downloadRepository.getDownloadedSongs().collect { entities ->
+                val songs = entities.map { entity ->
+                    HomeSong.fromDownloaded(entity)
+                }
+                _uiState.update { it.copy(downloadedSongs = songs) }
             }
         }
     }

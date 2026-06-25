@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
@@ -113,6 +114,17 @@ class RealDownloadRepository @Inject constructor(
         downloadedSongDao.deleteBySongId(songId)
         _activeDownloadStatus.update { it - songId }
     }
+
+    override fun getDownloadedSongs(): Flow<List<DownloadedSongEntity>> =
+        downloadedSongDao.getAll().map { entities ->
+            val (valid, stale) = withContext(Dispatchers.IO) {
+                entities.partition { File(it.localPath).exists() }
+            }
+            for (entity in stale) {
+                downloadedSongDao.deleteBySongId(entity.songId)
+            }
+            valid
+        }
 
     override fun isDownloaded(songId: String): Flow<Boolean> =
         downloadedSongDao.existsBySongId(songId)

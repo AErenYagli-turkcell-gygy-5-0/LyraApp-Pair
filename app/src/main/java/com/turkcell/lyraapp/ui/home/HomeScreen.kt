@@ -110,7 +110,8 @@ fun HomeScreen(
     ) { innerPadding ->
         val hasData = state.forYouSongs.isNotEmpty() ||
             state.recentlyPlayedSongs.isNotEmpty() ||
-            state.recommendationSongs.isNotEmpty()
+            state.recommendationSongs.isNotEmpty() ||
+            state.downloadedSongs.isNotEmpty()
 
         when {
             state.isLoading && !hasData -> {
@@ -150,6 +151,10 @@ fun HomeScreen(
                     }
                     if (state.forYouSongs.isNotEmpty()) {
                         item { ForYouGrid(songs = state.forYouSongs, onIntent = onIntent) }
+                    }
+                    if (state.downloadedSongs.isNotEmpty()) {
+                        item { SectionHeader(title = "İndirilenler") }
+                        item { DownloadedRow(songs = state.downloadedSongs, onIntent = onIntent) }
                     }
                     item { SectionHeader(title = "Son çalınanlar", trailingText = "Tümü") }
                     if (state.recentlyPlayedSongs.isNotEmpty()) {
@@ -413,6 +418,64 @@ private fun RecentlyPlayedRow(songs: List<HomeSong>, onIntent: (HomeIntent) -> U
 }
 
 @Composable
+private fun DownloadedRow(songs: List<HomeSong>, onIntent: (HomeIntent) -> Unit) {
+    LazyRow(
+        contentPadding = PaddingValues(horizontal = 20.dp),
+        horizontalArrangement = Arrangement.spacedBy(14.dp),
+    ) {
+        items(songs, key = { it.id }) { song ->
+            Column(
+                modifier = Modifier
+                    .width(150.dp)
+                    .clickable { onIntent(HomeIntent.SongClicked(song)) },
+            ) {
+                Box {
+                    Artwork(
+                        startColor = song.artworkStartColor,
+                        endColor = song.artworkEndColor,
+                        modifier = Modifier
+                            .size(150.dp)
+                            .clip(RoundedCornerShape(16.dp)),
+                    )
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(8.dp)
+                            .size(28.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.85f)),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            imageVector = LyraIcons.Download,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(16.dp),
+                        )
+                    }
+                }
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = song.title,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    text = song.artist,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+    }
+}
+
+@Composable
 private fun RecommendationsRow(songs: List<HomeSong>, onIntent: (HomeIntent) -> Unit) {
     LazyRow(
         contentPadding = PaddingValues(horizontal = 20.dp),
@@ -490,6 +553,10 @@ private val previewState = HomeUiState(
         HomeSong("s_midnight-run", "Midnight Run", "Deep Wave", "Night Shift", 38000, 0xFF9B7FC4, 0xFF5A4480),
         HomeSong("s_solar-flare", "Solar Flare", "Neon Pulse", "Cosmic Rays", 28000, 0xFF6B5FB8, 0xFF3A3270),
         HomeSong("s_kervan", "Kervan", "City Echo", "Yolculuk", 45000, 0xFF3FAE9C, 0xFF1E5D52),
+    ),
+    downloadedSongs = listOf(
+        HomeSong("s_neon-tide", "Neon Tide", "Aurora Drift", null, 0, 0xFF8B6FB8, 0xFF4A3D6B),
+        HomeSong("s_ocean-drive", "Ocean Drive", "Solar Flare", null, 0, 0xFF6FBF5A, 0xFF356B2A),
     ),
 )
 

@@ -16,7 +16,22 @@ data class HomeSong(
     val durationMs: Int,
     val artworkStartColor: Long,
     val artworkEndColor: Long,
-)
+) {
+    companion object {
+        fun fromDownloaded(entity: com.turkcell.lyraapp.data.download.DownloadedSongEntity): HomeSong {
+            val colors = artworkColorsFor(entity.songId)
+            return HomeSong(
+                id = entity.songId,
+                title = entity.title,
+                artist = entity.artist,
+                album = null,
+                durationMs = 0,
+                artworkStartColor = colors.first,
+                artworkEndColor = colors.second,
+            )
+        }
+    }
+}
 
 fun artworkColorsFor(id: String): Pair<Long, Long> {
     val index = abs(id.hashCode()) % ARTWORK_PALETTE.size
