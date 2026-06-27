@@ -29,6 +29,7 @@ import com.turkcell.lyraapp.ui.likedsongs.LikedSongsRoute
 import com.turkcell.lyraapp.ui.nowplaying.NowPlayingRoute
 import com.turkcell.lyraapp.ui.payment.PaymentRoute
 import com.turkcell.lyraapp.ui.player.MiniPlayer
+import com.turkcell.lyraapp.ui.premium.PremiumSuccessScreen
 import com.turkcell.lyraapp.ui.player.PlayerEffect
 import com.turkcell.lyraapp.ui.player.PlayerViewModel
 import com.turkcell.lyraapp.ui.playlistdetail.PlaylistDetailRoute
@@ -206,13 +207,34 @@ fun LyraNavHost(
                 ),
             ) {
                 PaymentRoute(
-                    onPaymentSuccess = {
-                        navController.navigate(LyraDestination.Profile.route) {
+                    onPaymentSuccess = { durationDays ->
+                        navController.navigate(premiumSuccessRoute(durationDays)) {
                             popUpTo(LyraDestination.Home.route) { inclusive = false }
                             launchSingleTop = true
                         }
                     },
                     onNavigateBack = { navController.popBackStack() },
+                )
+            }
+
+            composable(
+                route = "${LyraDestination.PremiumSuccess.route}?durationDays={durationDays}",
+                arguments = listOf(
+                    navArgument("durationDays") {
+                        type = NavType.IntType
+                        defaultValue = 30
+                    },
+                ),
+            ) { backStackEntry ->
+                val durationDays = backStackEntry.arguments?.getInt("durationDays") ?: 30
+                PremiumSuccessScreen(
+                    durationDays = durationDays,
+                    onStartListening = {
+                        navController.navigate(LyraDestination.Home.route) {
+                            popUpTo(LyraDestination.Home.route) { inclusive = true }
+                            launchSingleTop = true
+                        }
+                    },
                 )
             }
         }

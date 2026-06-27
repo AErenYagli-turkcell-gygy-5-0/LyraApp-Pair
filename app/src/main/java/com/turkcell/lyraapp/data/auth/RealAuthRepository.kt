@@ -12,6 +12,7 @@ import javax.inject.Inject
 class RealAuthRepository @Inject constructor(
     private val authApiService: AuthApiService,
     private val moshi: Moshi,
+    private val userSessionManager: UserSessionManager,
 ) : AuthRepository {
 
     override suspend fun requestOtp(phoneNumber: String): Result<OtpRequestResult> =
@@ -30,6 +31,7 @@ class RealAuthRepository @Inject constructor(
             val response = authApiService.verifyOtp(OtpVerifyBodyDto(phone = phoneNumber, code = code))
             if (response.isSuccessful) {
                 val session = response.body()!!.data
+                userSessionManager.setUser(session.user)
                 OtpVerifyResult(
                     accessToken = session.accessToken,
                     refreshToken = session.refreshToken,
@@ -54,7 +56,9 @@ class RealAuthRepository @Inject constructor(
                     birthDate = birthDate,
                 ),
             )
-            if (!response.isSuccessful) {
+            if (response.isSuccessful) {
+                response.body()?.data?.let { userSessionManager.setUser(it) }
+            } else {
                 throw apiException(response)
             }
         }

@@ -3,6 +3,7 @@ package com.turkcell.lyraapp.ui.home
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.turkcell.lyraapp.data.auth.UserSessionManager
 import com.turkcell.lyraapp.data.download.DownloadRepository
 import com.turkcell.lyraapp.data.home.HomeRepository
 import com.turkcell.lyraapp.data.home.HomeSong
@@ -24,8 +25,6 @@ import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
-import java.util.TimeZone
-import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 
 @HiltViewModel
@@ -36,6 +35,7 @@ class HomeViewModel @Inject constructor(
     private val downloadRepository: DownloadRepository,
     private val authApiService: AuthApiService,
     private val membershipRepository: MembershipRepository,
+    private val userSessionManager: UserSessionManager,
     @ApplicationContext private val context: Context,
 ) : ViewModel() {
 
@@ -62,6 +62,21 @@ class HomeViewModel @Inject constructor(
                     HomeSong.fromDownloaded(entity)
                 }
                 _uiState.update { it.copy(downloadedSongs = songs) }
+            }
+        }
+        viewModelScope.launch {
+            userSessionManager.user.collect { user ->
+                if (user != null) {
+                    val first = user.firstName.orEmpty()
+                    val last = user.lastName.orEmpty()
+                    val initials = buildString {
+                        if (first.isNotEmpty()) append(first.first().uppercaseChar())
+                        if (last.isNotEmpty()) append(last.first().uppercaseChar())
+                    }.ifEmpty {
+                        (user.displayName ?: user.phone).take(2).uppercase()
+                    }
+                    _uiState.update { it.copy(userInitials = initials) }
+                }
             }
         }
         checkPremiumExpiry()
@@ -148,10 +163,11 @@ class HomeViewModel @Inject constructor(
                 val response = authApiService.getMe()
                 if (!response.isSuccessful) return@launch
                 val user = response.body()?.data ?: return@launch
+                userSessionManager.setUser(user)
                 val membership = user.membership ?: return@launch
                 if (membership.status != "active") return@launch
 
-                val daysLeft = calculateDaysLeft(membership.expiresAt)
+                val daysLeft = UserSessionManager.calculateDaysLeft(membership.expiresAt)
                 if (daysLeft > 3) return@launch
                 if (wasWarningShownToday()) return@launch
 
@@ -160,34 +176,12 @@ class HomeViewModel @Inject constructor(
                         _uiState.update {
                             it.copy(
                                 showPremiumWarning = true,
-                                premiumDaysLeft = daysLeft.coerceAtLeast(0).toInt(),
+                                premiumDaysLeft = daysLeft,
                                 premiumPlans = plans,
                             )
                         }
                     }
             } catch (_: Exception) { }
-        }
-    }
-
-    private fun calculateDaysLeft(expiresAt: String): Long {
-        return try {
-            val isoFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US).apply {
-                timeZone = TimeZone.getTimeZone("UTC")
-            }
-            val dateOnly = SimpleDateFormat("yyyy-MM-dd", Locale.US)
-
-            val expiryDate = try {
-                val cleaned = expiresAt.replace("Z", "").substringBefore(".")
-                isoFormat.parse(cleaned)
-            } catch (_: Exception) {
-                dateOnly.parse(expiresAt)
-            }
-
-            if (expiryDate == null) return 0L
-            val diffMs = expiryDate.time - System.currentTimeMillis()
-            TimeUnit.MILLISECONDS.toDays(diffMs)
-        } catch (_: Exception) {
-            0L
         }
     }
 

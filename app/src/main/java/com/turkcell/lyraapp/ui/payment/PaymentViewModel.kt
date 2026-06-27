@@ -3,6 +3,7 @@ package com.turkcell.lyraapp.ui.payment
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.turkcell.lyraapp.data.auth.UserSessionManager
 import com.turkcell.lyraapp.data.membership.CheckoutCard
 import com.turkcell.lyraapp.data.membership.MembershipRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -20,6 +21,7 @@ import javax.inject.Inject
 class PaymentViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val membershipRepository: MembershipRepository,
+    private val userSessionManager: UserSessionManager,
 ) : ViewModel() {
 
     private val planType: String = savedStateHandle["planType"] ?: "recurring"
@@ -107,9 +109,10 @@ class PaymentViewModel @Inject constructor(
                     holderName = state.holderName.ifBlank { null },
                 ),
             )
-                .onSuccess {
+                .onSuccess { result ->
+                    userSessionManager.updateMembership(result.membership)
                     _uiState.update { it.copy(isProcessing = false) }
-                    _effect.send(PaymentEffect.PaymentSuccess)
+                    _effect.send(PaymentEffect.PaymentSuccess(plan.durationDays))
                 }
                 .onFailure { error ->
                     val msg = error.message ?: "Ödeme işlemi başarısız."

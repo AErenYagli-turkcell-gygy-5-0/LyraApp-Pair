@@ -23,6 +23,6 @@ sealed interface PaymentIntent {
 }
 
 sealed interface PaymentEffect {
-    data object PaymentSuccess : PaymentEffect
+    data class PaymentSuccess(val durationDays: Int) : PaymentEffect
     data class ShowError(val message: String) : PaymentEffect
 }

@@ -50,7 +50,7 @@ import com.turkcell.lyraapp.ui.theme.LyraAppTheme
 
 @Composable
 fun PaymentRoute(
-    onPaymentSuccess: () -> Unit,
+    onPaymentSuccess: (durationDays: Int) -> Unit,
     onNavigateBack: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: PaymentViewModel = hiltViewModel(),
@@ -61,7 +61,7 @@ fun PaymentRoute(
     LaunchedEffect(Unit) {
         viewModel.effect.collect { effect ->
             when (effect) {
-                is PaymentEffect.PaymentSuccess -> onPaymentSuccess()
+                is PaymentEffect.PaymentSuccess -> onPaymentSuccess(effect.durationDays)
                 is PaymentEffect.ShowError -> snackbarHostState.showSnackbar(effect.message)
             }
         }
