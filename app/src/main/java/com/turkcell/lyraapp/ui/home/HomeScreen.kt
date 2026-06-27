@@ -23,13 +23,16 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -45,12 +48,15 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.turkcell.lyraapp.data.home.HomeSong
+import com.turkcell.lyraapp.data.membership.MembershipPlan
 import com.turkcell.lyraapp.ui.icons.LyraIcons
 import com.turkcell.lyraapp.ui.theme.LyraAppTheme
 
@@ -58,6 +64,8 @@ import com.turkcell.lyraapp.ui.theme.LyraAppTheme
 fun HomeRoute(
     onNavigateToProfile: () -> Unit,
     onNavigateToNowPlaying: () -> Unit,
+    onNavigateToPremium: () -> Unit = {},
+    onNavigateToPayment: (planType: String) -> Unit = {},
     modifier: Modifier = Modifier,
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
@@ -82,6 +90,8 @@ fun HomeRoute(
                     snackbarHostState.showSnackbar(message = effect.message)
                 }
                 is HomeEffect.NavigateToNowPlaying -> onNavigateToNowPlaying()
+                is HomeEffect.NavigateToPremium -> onNavigateToPremium()
+                is HomeEffect.NavigateToPayment -> onNavigateToPayment(effect.planType)
             }
         }
     }
@@ -103,6 +113,15 @@ fun HomeScreen(
     modifier: Modifier = Modifier,
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
 ) {
+    if (state.showPremiumWarning) {
+        PremiumExpiryDialog(
+            daysLeft = state.premiumDaysLeft,
+            plans = state.premiumPlans,
+            onAction = { planType -> onIntent(HomeIntent.PremiumWarningAction(planType)) },
+            onDismiss = { onIntent(HomeIntent.DismissPremiumWarning) },
+        )
+    }
+
     Scaffold(
         modifier = modifier.fillMaxSize(),
         containerColor = MaterialTheme.colorScheme.background,
@@ -593,5 +612,122 @@ private fun HomeScreenErrorPreview() {
             onIntent = {},
             onNavigateToProfile = {},
         )
+    }
+}
+
+@Composable
+private fun PremiumExpiryDialog(
+    daysLeft: Int,
+    plans: List<MembershipPlan>,
+    onAction: (planType: String) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val recurringPlan = plans.find { it.type == "recurring" }
+    val oneTimePlan = plans.find { it.type == "one-time" }
+
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 32.dp)
+                .clip(RoundedCornerShape(24.dp))
+                .background(MaterialTheme.colorScheme.surfaceContainerHigh),
+        ) {
+            Column(
+                modifier = Modifier.padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Icon(
+                    imageVector = LyraIcons.Clock,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(40.dp),
+                )
+
+                Spacer(Modifier.height(16.dp))
+
+                Text(
+                    text = "Premium'un $daysLeft gün sonra bitiyor",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    textAlign = TextAlign.Center,
+                )
+
+                Spacer(Modifier.height(8.dp))
+
+                Text(
+                    text = "Tek seferlik erişimin sona ermek üzere. Kesintisiz dinlemeye devam etmek için yenile ya da aylık aboneliğe geç.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                )
+
+                Spacer(Modifier.height(20.dp))
+
+                if (recurringPlan != null) {
+                    Button(
+                        onClick = { onAction("recurring") },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp),
+                        shape = RoundedCornerShape(24.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary,
+                        ),
+                    ) {
+                        Icon(
+                            imageVector = LyraIcons.Refresh,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp),
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            text = "Aylık aboneliğe geç · ₺${recurringPlan.priceLira},99",
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                    }
+                }
+
+                Spacer(Modifier.height(10.dp))
+
+                if (oneTimePlan != null) {
+                    OutlinedButton(
+                        onClick = { onAction("one-time") },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp),
+                        shape = RoundedCornerShape(24.dp),
+                        border = ButtonDefaults.outlinedButtonBorder(enabled = true),
+                    ) {
+                        Icon(
+                            imageVector = LyraIcons.Refresh,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp),
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            text = "30 gün yenile · ₺${oneTimePlan.priceLira},99",
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                    }
+                }
+
+                Spacer(Modifier.height(8.dp))
+
+                TextButton(onClick = onDismiss) {
+                    Text(
+                        text = "Daha sonra",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        }
     }
 }

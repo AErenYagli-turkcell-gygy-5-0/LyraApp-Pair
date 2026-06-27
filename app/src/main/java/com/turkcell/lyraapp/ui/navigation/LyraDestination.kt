@@ -12,6 +12,8 @@ enum class LyraDestination(val route: String) {
     PlaylistDetail("playlistdetail"),
     NowPlaying("nowplaying"),
     CreatePlaylist("createplaylist"),
+    Premium("premium"),
+    Payment("payment"),
 }
 
 fun playlistDetailRoute(playlistId: String) = "playlistdetail/$playlistId"
@@ -21,3 +23,5 @@ fun otpRoute(phoneNumber: String, firstTime: Boolean) =
 
 fun completeProfileRoute(phoneNumber: String) =
     "completeprofile?phoneNumber=$phoneNumber"
+
+fun paymentRoute(planType: String) = "payment?planType=$planType"

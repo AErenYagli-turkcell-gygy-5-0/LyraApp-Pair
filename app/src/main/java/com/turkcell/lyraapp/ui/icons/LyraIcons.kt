@@ -255,6 +255,64 @@ object LyraIcons {
             pathData = "M9,16.17L4.83,12l-1.42,1.41L9,19 21,7l-1.41,-1.41z",
         )
     }
+
+    // ── Premium / Ödeme ikonları ──
+
+    /** Premium rozeti / yıldız (Material Star). */
+    val PremiumStar: ImageVector by lazy {
+        lyraIcon(
+            name = "PremiumStar",
+            pathData = "M12,17.27L18.18,21l-1.64,-7.03L22,9.24l-7.19,-0.61L12,2 9.19,8.63 2,9.24l5.46,4.73L5.82,21z",
+        )
+    }
+
+    /** Saat ikonu — premium bitiş uyarısı (Material Schedule). */
+    val Clock: ImageVector by lazy {
+        lyraIcon(
+            name = "Clock",
+            pathData = "M11.99,2C6.47,2 2,6.48 2,12s4.47,10 9.99,10C17.52,22 22,17.52 22,12S17.52,2 11.99,2zM12,20c-4.42,0 -8,-3.58 -8,-8s3.58,-8 8,-8 8,3.58 8,8 -3.58,8 -8,8zM12.5,7H11v6l5.25,3.15 0.75,-1.23 -4.5,-2.67z",
+        )
+    }
+
+    /** Reklamsız dinleme (Material BlockOutlined — çizgili daire). */
+    val NoAds: ImageVector by lazy {
+        lyraIcon(
+            name = "NoAds",
+            pathData = "M12,2C6.48,2 2,6.48 2,12s4.48,10 10,10 10,-4.48 10,-10S17.52,2 12,2zM4,12c0,-4.42 3.58,-8 8,-8 1.85,0 3.55,0.63 4.9,1.69L5.69,16.9C4.63,15.55 4,13.85 4,12zM12,20c-1.85,0 -3.55,-0.63 -4.9,-1.69L18.31,7.1C19.37,8.45 20,10.15 20,12c0,4.42 -3.58,8 -8,8z",
+        )
+    }
+
+    /** Sınırsız atlama (Material SkipNext). */
+    val SkipNext: ImageVector by lazy {
+        lyraIcon(
+            name = "SkipNext",
+            pathData = "M6,18l8.5,-6L6,6v12zM16,6v12h2V6h-2z",
+        )
+    }
+
+    /** Tüm cihazlar (Material Devices). */
+    val Devices: ImageVector by lazy {
+        lyraIcon(
+            name = "Devices",
+            pathData = "M4,6h18V4H4c-1.1,0 -2,0.9 -2,2v11H0v3h14v-3H4V6zM23,8h-6c-0.55,0 -1,0.45 -1,1v10c0,0.55 0.45,1 1,1h6c0.55,0 1,-0.45 1,-1V9c0,-0.55 -0.45,-1 -1,-1zM22,17h-4v-7h4v7z",
+        )
+    }
+
+    /** Kredi kartı (Material CreditCard). */
+    val CreditCard: ImageVector by lazy {
+        lyraIcon(
+            name = "CreditCard",
+            pathData = "M20,4H4C2.89,4 2.01,4.89 2.01,6L2,18c0,1.11 0.89,2 2,2h16c1.11,0 2,-0.89 2,-2V6c0,-1.11 -0.89,-2 -2,-2zM20,18H4v-6h16v6zM20,8H4V6h16v2z",
+        )
+    }
+
+    /** Yenile / tekrar (Material Refresh). */
+    val Refresh: ImageVector by lazy {
+        lyraIcon(
+            name = "Refresh",
+            pathData = "M17.65,6.35C16.2,4.9 14.21,4 12,4c-4.42,0 -7.99,3.58 -7.99,8s3.57,8 7.99,8c3.73,0 6.84,-2.55 7.73,-6h-2.08c-0.82,2.33 -3.04,4 -5.65,4 -3.31,0 -6,-2.69 -6,-6s2.69,-6 6,-6c1.66,0 3.14,0.69 4.22,1.78L13,11h7V4l-2.35,2.35z",
+        )
+    }
 }
 
 /**

@@ -34,6 +34,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
@@ -45,14 +46,9 @@ import com.turkcell.lyraapp.data.profile.SettingItem
 import com.turkcell.lyraapp.ui.icons.LyraIcons
 import com.turkcell.lyraapp.ui.theme.LyraAppTheme
 
-/**
- * Profil akışının durumlu (stateful) giriş noktası.
- *
- * [ProfileViewModel]'i Hilt'ten alır, durumu yaşam döngüsüne duyarlı şekilde toplar ve
- * tek seferlik [ProfileEffect]'leri tüketir.
- */
 @Composable
 fun ProfileRoute(
+    onNavigateToPremium: () -> Unit = {},
     modifier: Modifier = Modifier,
     viewModel: ProfileViewModel = hiltViewModel(),
 ) {
@@ -63,6 +59,7 @@ fun ProfileRoute(
         viewModel.effect.collect { effect ->
             when (effect) {
                 is ProfileEffect.ShowError -> snackbarHostState.showSnackbar(effect.message)
+                is ProfileEffect.NavigateToPremium -> onNavigateToPremium()
             }
         }
     }
@@ -75,11 +72,6 @@ fun ProfileRoute(
     )
 }
 
-/**
- * Profil ekranı: avatar + istatistikler + tema toggles + ayarlar listesi.
- *
- * Tamamen durumsuzdur; durumu [state] üzerinden alır, etkileşimleri [onIntent] ile yayımlar.
- */
 @Composable
 fun ProfileScreen(
     state: ProfileUiState,
@@ -119,7 +111,15 @@ fun ProfileScreen(
                 item {
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                 }
-                item { Spacer(Modifier.height(24.dp)) }
+                item { Spacer(Modifier.height(16.dp)) }
+                item {
+                    PremiumCard(
+                        isPremium = state.isPremium,
+                        premiumDaysLeft = state.premiumDaysLeft,
+                        onClick = { onIntent(ProfileIntent.PremiumCardClicked) },
+                    )
+                }
+                item { Spacer(Modifier.height(16.dp)) }
                 item {
                     ThemeSection(
                         isDark = state.isDarkTheme,
@@ -140,6 +140,74 @@ fun ProfileScreen(
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun PremiumCard(
+    isPremium: Boolean,
+    premiumDaysLeft: Int,
+    onClick: () -> Unit,
+) {
+    val gradientColors = listOf(
+        MaterialTheme.colorScheme.primary.copy(alpha = 0.4f),
+        MaterialTheme.colorScheme.tertiary.copy(alpha = 0.3f),
+    )
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .background(Brush.horizontalGradient(gradientColors))
+            .clickable(onClick = onClick)
+            .padding(16.dp),
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Icon(
+                imageVector = LyraIcons.PremiumStar,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(28.dp),
+            )
+            Spacer(Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                if (isPremium) {
+                    Text(
+                        text = "Premium · $premiumDaysLeft gün kaldı",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                    Text(
+                        text = "Yenile ya da aboneliğe geç",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                } else {
+                    Text(
+                        text = "Premium'a geç",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                    Text(
+                        text = "Reklamsız, sınırsız müzik",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+            Icon(
+                imageVector = LyraIcons.ArrowForward,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(18.dp),
+            )
         }
     }
 }
@@ -216,6 +284,16 @@ private fun AvatarSection(state: ProfileUiState) {
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.primary,
+                )
+                Text(
+                    text = "·",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(
+                    text = "${state.premiumDaysLeft} gün",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }
@@ -403,6 +481,8 @@ private val previewState = ProfileUiState(
     fullName = "Zeynep Kaya",
     username = "@zeynepk",
     isPremium = true,
+    premiumDaysLeft = 3,
+    membershipType = "one-time",
     playlistCount = "127",
     followerCount = "1.2B",
     followingCount = "348",
@@ -416,18 +496,34 @@ private val previewState = ProfileUiState(
     ),
 )
 
-@Preview(name = "Profile - Light", showBackground = true, showSystemUi = true)
+@Preview(name = "Profile - Premium - Dark", showBackground = true, showSystemUi = true)
 @Composable
-private fun ProfileScreenLightPreview() {
-    LyraAppTheme(darkTheme = false) {
-        ProfileScreen(state = previewState, onIntent = {})
+private fun ProfileScreenPremiumDarkPreview() {
+    LyraAppTheme(darkTheme = true) {
+        ProfileScreen(state = previewState.copy(isDarkTheme = true), onIntent = {})
     }
 }
 
-@Preview(name = "Profile - Dark", showBackground = true, showSystemUi = true)
+@Preview(name = "Profile - Free - Dark", showBackground = true, showSystemUi = true)
 @Composable
-private fun ProfileScreenDarkPreview() {
+private fun ProfileScreenFreeDarkPreview() {
     LyraAppTheme(darkTheme = true) {
-        ProfileScreen(state = previewState.copy(isDarkTheme = true), onIntent = {})
+        ProfileScreen(
+            state = previewState.copy(
+                isPremium = false,
+                premiumDaysLeft = 0,
+                membershipType = null,
+                isDarkTheme = true,
+            ),
+            onIntent = {},
+        )
+    }
+}
+
+@Preview(name = "Profile - Premium - Light", showBackground = true, showSystemUi = true)
+@Composable
+private fun ProfileScreenPremiumLightPreview() {
+    LyraAppTheme(darkTheme = false) {
+        ProfileScreen(state = previewState, onIntent = {})
     }
 }

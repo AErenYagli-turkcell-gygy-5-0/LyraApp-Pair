@@ -27,10 +27,12 @@ import com.turkcell.lyraapp.ui.home.HomeRoute
 import com.turkcell.lyraapp.ui.library.LibraryRoute
 import com.turkcell.lyraapp.ui.likedsongs.LikedSongsRoute
 import com.turkcell.lyraapp.ui.nowplaying.NowPlayingRoute
+import com.turkcell.lyraapp.ui.payment.PaymentRoute
 import com.turkcell.lyraapp.ui.player.MiniPlayer
 import com.turkcell.lyraapp.ui.player.PlayerEffect
 import com.turkcell.lyraapp.ui.player.PlayerViewModel
 import com.turkcell.lyraapp.ui.playlistdetail.PlaylistDetailRoute
+import com.turkcell.lyraapp.ui.premium.PremiumRoute
 import com.turkcell.lyraapp.ui.profile.ProfileRoute
 import com.turkcell.lyraapp.ui.search.SearchRoute
 
@@ -124,6 +126,10 @@ fun LyraNavHost(
                 HomeRoute(
                     onNavigateToProfile = { navController.navigateToTab(LyraDestination.Profile) },
                     onNavigateToNowPlaying = { navController.navigate(LyraDestination.NowPlaying.route) },
+                    onNavigateToPremium = { navController.navigate(LyraDestination.Premium.route) },
+                    onNavigateToPayment = { planType ->
+                        navController.navigate(paymentRoute(planType))
+                    },
                 )
             }
 
@@ -149,7 +155,13 @@ fun LyraNavHost(
                     },
                 )
             }
-            composable(LyraDestination.Profile.route) { ProfileRoute() }
+            composable(LyraDestination.Profile.route) {
+                ProfileRoute(
+                    onNavigateToPremium = {
+                        navController.navigate(LyraDestination.Premium.route)
+                    },
+                )
+            }
 
             composable(
                 route = "${LyraDestination.PlaylistDetail.route}/{playlistId}",
@@ -172,6 +184,35 @@ fun LyraNavHost(
             composable(LyraDestination.CreatePlaylist.route) {
                 CreatePlaylistRoute(
                     onDismiss = { navController.popBackStack() },
+                )
+            }
+
+            composable(LyraDestination.Premium.route) {
+                PremiumRoute(
+                    onNavigateToPayment = { planType ->
+                        navController.navigate(paymentRoute(planType))
+                    },
+                    onNavigateBack = { navController.popBackStack() },
+                )
+            }
+
+            composable(
+                route = "${LyraDestination.Payment.route}?planType={planType}",
+                arguments = listOf(
+                    navArgument("planType") {
+                        type = NavType.StringType
+                        defaultValue = "recurring"
+                    },
+                ),
+            ) {
+                PaymentRoute(
+                    onPaymentSuccess = {
+                        navController.navigate(LyraDestination.Profile.route) {
+                            popUpTo(LyraDestination.Home.route) { inclusive = false }
+                            launchSingleTop = true
+                        }
+                    },
+                    onNavigateBack = { navController.popBackStack() },
                 )
             }
         }

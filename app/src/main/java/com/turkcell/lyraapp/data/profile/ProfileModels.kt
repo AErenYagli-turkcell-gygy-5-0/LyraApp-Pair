@@ -11,6 +11,8 @@ data class ProfileData(
     val fullName: String,
     val username: String,
     val isPremium: Boolean,
+    val premiumDaysLeft: Int = 0,
+    val membershipType: String? = null,
     val playlistCount: String,
     val followerCount: String,
     val followingCount: String,

@@ -61,6 +61,7 @@ data class UserDto(
     val birthDate: String?,
     val createdAt: String,
     val profileCompleted: Boolean,
+    val membership: MembershipDto? = null,
 )
 
 @JsonClass(generateAdapter = false)

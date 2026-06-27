@@ -8,6 +8,7 @@ import com.turkcell.lyraapp.data.remote.dto.UpdateInformationsBodyDto
 import com.turkcell.lyraapp.data.remote.dto.UserResponseDto
 import retrofit2.Response
 import retrofit2.http.Body
+import retrofit2.http.GET
 import retrofit2.http.POST
 
 interface AuthApiService {
@@ -20,4 +21,7 @@ interface AuthApiService {
 
     @POST("api/v1/me/update-informations")
     suspend fun updateInformations(@Body body: UpdateInformationsBodyDto): Response<UserResponseDto>
+
+    @GET("api/v1/me")
+    suspend fun getMe(): Response<UserResponseDto>
 }

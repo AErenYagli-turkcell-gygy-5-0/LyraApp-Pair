@@ -15,15 +15,6 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-/**
- * Profil ekranının ViewModel'i (bkz. mvi-viewmodel-rules.md).
- *
- * İki bağımsız işlem paralel olarak başlatılır:
- * - [loadProfile]: profil verisini bir kez yükler.
- * - Tema Flow'u: [ThemePreferenceRepository.isDarkTheme] sürekli dinlenir ve
- *   [ProfileUiState.isDarkTheme] senkronize tutulur. Bu sayede toggle her zaman
- *   gerçek DataStore değerini yansıtır.
- */
 @HiltViewModel
 class ProfileViewModel @Inject constructor(
     private val profileRepository: ProfileRepository,
@@ -49,6 +40,11 @@ class ProfileViewModel @Inject constructor(
         when (intent) {
             is ProfileIntent.ThemeChanged -> applyTheme(intent.isDark)
             is ProfileIntent.SettingClicked -> Unit
+            is ProfileIntent.PremiumCardClicked -> {
+                viewModelScope.launch {
+                    _effect.send(ProfileEffect.NavigateToPremium)
+                }
+            }
         }
     }
 
@@ -72,6 +68,8 @@ class ProfileViewModel @Inject constructor(
                             fullName = data.fullName,
                             username = data.username,
                             isPremium = data.isPremium,
+                            premiumDaysLeft = data.premiumDaysLeft,
+                            membershipType = data.membershipType,
                             playlistCount = data.playlistCount,
                             followerCount = data.followerCount,
                             followingCount = data.followingCount,

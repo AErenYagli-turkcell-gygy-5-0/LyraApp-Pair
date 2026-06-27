@@ -365,7 +365,7 @@
 - Sebep: Backend API (`docs/api/openapi.json`) hazir; `/me/*` endpoint'leri JWT Bearer token gerektirir.
   Tek domain modeli (`HomeSong`) API'nin 3 endpoint icin ayni Song semasini kullanmasini yansitir.
 
-### Kimlik Dogrulama — Telefon + OTP Akisi
+### Kimlik Doğrulama — Telefon + OTP Akışı
 
 - Karar: Sifre tabanli login/register akisi kaldirildi; yerine **telefon numarasi + OTP** tabanli
   passwordless akis getirildi. 3 adimli flow: (1) Telefon numarasi girisi, (2) OTP dogrulama,
@@ -390,3 +390,45 @@
 - Sebep: Backend API sozlesmesi (`docs/api/openapi.json`) telefon + OTP akisi gerektirir; sifre tabanli
   akis backend ile uyumsuzdu. Token yonetimi DataStore ile saglanir (mevcut tema tercihi pattern'i ile
   tutarli).
+
+### Premium Üyelik Akışı
+
+- Karar: **Premium tanitim + plan secimi + odeme + bitis uyarisi** uctan uca akis eklendi.
+  Veri katmani: `MembershipRepository` (interface + `RealMembershipRepository`), `MembershipApiService`
+  (Retrofit), `MembershipDto.kt` (DTO'lar). UI katmani: 2 yeni MVI ekran (`ui/premium/`, `ui/payment/`),
+  profil guncellemesi, ana sayfa premium bitis popup'i.
+
+- Son Guncelleme Tarihi: 27.06.2026
+
+- Uygulama:
+  - `data/remote/dto/MembershipDto.kt` — `MembershipPlanDto`, `MembershipDto`, `CheckoutRequestDto`,
+    `CheckoutCardDto`, `CheckoutResponseDto`. openapi.json semalarinla birebir eslesir.
+  - `UserDto.membership: MembershipDto?` — nullable alan eklendi (free tier'da null).
+  - `data/remote/MembershipApiService.kt` — `GET /memberships/plans` (public) + `POST /memberships/checkout` (Bearer).
+  - `data/membership/MembershipRepository.kt` — Interface + domain modelleri (`MembershipPlan`, `Membership`,
+    `CheckoutCard`, `CheckoutResult`).
+  - `data/membership/RealMembershipRepository.kt` — Gercek API impl; hata kodlari 400/401/402 ele alinir.
+  - `di/MembershipModule.kt` — Hilt bind; `NetworkModule`'a `MembershipApiService` provision eklendi.
+  - `AuthApiService`'e `GET /api/v1/me` eklendi (ueyelik durumu sorgulama icin).
+  - `ui/premium/` — `PremiumContract`, `PremiumViewModel`, `PremiumScreen`. Plan listesi API'den dinamik
+    yuklenir; hardcode fiyat yok. Secili plan radio ile vurgulanir, "Devam et" ile odeme ekranina gecilir.
+  - `ui/payment/` — `PaymentContract`, `PaymentViewModel`, `PaymentScreen`. Kart onizleme (canli maskeli),
+    form validasyonu (16 hane + isim + AA/YY + CVC), `POST /memberships/checkout` cagirma.
+    Basari: Profil'e don. 402: "Odeme reddedildi" hata mesaji.
+  - `ui/profile/` — `ProfileContract`'a `PremiumCardClicked` Intent + `NavigateToPremium` Effect eklendi.
+    `ProfileScreen`'e gradient premium kart eklendi (free: "Premium'a gec", premium: "N guen kaldi").
+  - `ui/home/` — `HomeContract`'a `showPremiumWarning`, `premiumDaysLeft`, `premiumPlans` state alanlari
+    eklendi. `HomeViewModel` `GET /api/v1/me` ile ueyelik durumunu kontrol eder; kalan <= 3 guen ve
+    bugun gosterilmediyse popup tetiklenir. `PremiumExpiryDialog` composable'i "Aylik abonelik" ve
+    "30 guen yenile" butonlari ile dogrudan odeme akisina yonlendirir. Gosterim kontrolu SharedPreferences
+    ile guen bazli yapilir.
+  - `LyraDestination` — `Premium`, `Payment` eklendi; `paymentRoute(planType)` helper fonksiyonu.
+  - `LyraNavHost` — Premium ve Payment rotalari; Payment `planType` query param tasir (`SavedStateHandle`
+    ile ViewModel'de okunur). Odeme basarisi sonrasi `Profile`'a navigate edilir (Home korunur).
+
+- Bagimliliklar: Yeni kutuphane yok. Mevcut Retrofit + Moshi + Hilt yeterli.
+
+- Sebep: Backend API (`docs/api/openapi.json`) `GET /memberships/plans` ve `POST /memberships/checkout`
+  endpoint'lerini sagladi. Fiyatlar API'den dinamik okunur (hardcode yok). Ueyelik durumu `User.membership`
+  nullable alani ile tek kaynaktan yonetilir. Popup gosterim kontrolu basit SharedPreferences ile
+  saglanir (DataStore overkill — tek key, yanit/istek yok).
