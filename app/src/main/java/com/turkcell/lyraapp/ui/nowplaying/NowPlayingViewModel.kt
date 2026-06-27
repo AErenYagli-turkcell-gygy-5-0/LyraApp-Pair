@@ -47,6 +47,9 @@ class NowPlayingViewModel @Inject constructor(
                         isRepeat = state.isRepeat,
                         progress = state.progress,
                         currentPositionLabel = state.currentPositionLabel,
+                        isPlayingAd = state.isPlayingAd,
+                        adTitle = state.adTitle,
+                        adAdvertiser = state.adAdvertiser,
                     )
                 }
                 if (songChanged) {

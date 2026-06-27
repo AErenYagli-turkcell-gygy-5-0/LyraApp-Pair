@@ -14,9 +14,9 @@ import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import com.turkcell.lyraapp.data.download.DownloadRepository
-import com.turkcell.lyraapp.data.remote.HomeApiService
-import com.turkcell.lyraapp.data.remote.SongApiService
-import com.turkcell.lyraapp.data.remote.dto.RecordPlayBodyDto
+import com.turkcell.lyraapp.data.remote.PlaybackApiService
+import com.turkcell.lyraapp.data.remote.dto.AdCompleteBodyDto
+import com.turkcell.lyraapp.data.remote.dto.PlaybackNextBodyDto
 import java.io.ByteArrayOutputStream
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CompletableDeferred
@@ -40,8 +40,7 @@ import javax.inject.Singleton
 @Singleton
 class ExoPlayerPlaybackRepository @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val songApiService: SongApiService,
-    private val homeApiService: HomeApiService,
+    private val playbackApiService: PlaybackApiService,
     private val downloadRepository: DownloadRepository,
 ) : PlaybackRepository {
 
@@ -60,6 +59,14 @@ class ExoPlayerPlaybackRepository @Inject constructor(
     private var queueIndex = -1
     private var progressJob: Job? = null
     private var currentMediaItem: MediaItem? = null
+    private var pendingAfterAd: PendingAfterAd? = null
+
+    private data class PendingAfterAd(
+        val song: Song,
+        val streamUrl: String,
+        val impressionId: String,
+        val artworkBytes: ByteArray,
+    )
 
     private val playerListener = object : Player.Listener {
         override fun onIsPlayingChanged(isPlaying: Boolean) {
@@ -93,6 +100,7 @@ class ExoPlayerPlaybackRepository @Inject constructor(
     }
 
     override suspend fun playSong(song: Song) {
+        if (pendingAfterAd != null) return
         val existingIndex = queue.indexOfFirst { it.id == song.id }
         if (existingIndex >= 0) {
             queueIndex = existingIndex
@@ -121,12 +129,14 @@ class ExoPlayerPlaybackRepository @Inject constructor(
     }
 
     override suspend fun next() {
+        if (pendingAfterAd != null) return
         if (queue.isEmpty()) return
         queueIndex = (queueIndex + 1) % queue.size
         loadAndPlay(queue[queueIndex])
     }
 
     override suspend fun previous() {
+        if (pendingAfterAd != null) return
         if (queue.isEmpty()) return
         val positionMs = withContext(Dispatchers.Main) { player?.currentPosition ?: 0L }
         if (positionMs > RESTART_THRESHOLD_MS) {
@@ -150,6 +160,7 @@ class ExoPlayerPlaybackRepository @Inject constructor(
     }
 
     override suspend fun seekTo(progress: Float) {
+        if (pendingAfterAd != null) return
         val activePlayer = player ?: return
         val durationMs = withContext(Dispatchers.Main) { activePlayer.duration }
         if (durationMs <= 0L) return
@@ -169,6 +180,9 @@ class ExoPlayerPlaybackRepository @Inject constructor(
             it.copy(
                 currentSong = song,
                 isPlaying = false,
+                isPlayingAd = false,
+                adTitle = null,
+                adAdvertiser = null,
                 progress = 0f,
                 currentPositionLabel = "0:00",
             )
@@ -177,45 +191,120 @@ class ExoPlayerPlaybackRepository @Inject constructor(
             val localPath = withContext(Dispatchers.IO) {
                 downloadRepository.getLocalPath(song.id)
             }
-            val uri = if (localPath != null) {
-                android.net.Uri.fromFile(java.io.File(localPath)).toString()
-            } else {
-                withContext(Dispatchers.IO) {
-                    songApiService.getStreamUrl(song.id).data.url
-                }
+            if (localPath != null) {
+                playUri(
+                    uri = android.net.Uri.fromFile(java.io.File(localPath)).toString(),
+                    song = song,
+                )
+                return
             }
+
+            val response = withContext(Dispatchers.IO) {
+                playbackApiService.playbackNext(PlaybackNextBodyDto(song.id))
+            }
+            val data = response.data
             val artworkBytes = generateGradientArtwork(
                 song.artworkStartColor.toInt(),
                 song.artworkEndColor.toInt(),
             )
-            val mediaItem = MediaItem.Builder()
-                .setMediaId(song.id)
-                .setUri(uri)
-                .setMediaMetadata(
-                    MediaMetadata.Builder()
-                        .setTitle(song.title)
-                        .setArtist(song.artist)
-                        .setArtworkData(artworkBytes, MediaMetadata.PICTURE_TYPE_FRONT_COVER)
-                        .build(),
+
+            if (data.type == "ad" && data.ad != null && data.adStream != null && data.impressionId != null) {
+                pendingAfterAd = PendingAfterAd(
+                    song = song,
+                    streamUrl = data.stream.url,
+                    impressionId = data.impressionId,
+                    artworkBytes = artworkBytes,
                 )
-                .build()
-            currentMediaItem = mediaItem
-            val activePlayer = getOrStartPlayer()
-            withContext(Dispatchers.Main) {
-                activePlayer.setMediaItem(mediaItem)
-                activePlayer.prepare()
-                activePlayer.play()
-            }
-            withContext(Dispatchers.IO) {
-                runCatching { homeApiService.recordPlay(RecordPlayBodyDto(song.id)) }
+                _playbackState.update {
+                    it.copy(
+                        isPlayingAd = true,
+                        adTitle = data.ad.title,
+                        adAdvertiser = data.ad.advertiser,
+                    )
+                }
+                playUri(
+                    uri = data.adStream.url,
+                    mediaId = data.ad.id,
+                    title = data.ad.title,
+                    artist = data.ad.advertiser,
+                    artworkBytes = artworkBytes,
+                )
+            } else {
+                playUri(
+                    uri = data.stream.url,
+                    song = song,
+                    artworkBytes = artworkBytes,
+                )
             }
         } catch (e: Exception) {
-            _playbackState.update { it.copy(isPlaying = false) }
+            _playbackState.update { it.copy(isPlaying = false, isPlayingAd = false) }
+        }
+    }
+
+    private suspend fun playUri(
+        uri: String,
+        song: Song,
+        artworkBytes: ByteArray = generateGradientArtwork(
+            song.artworkStartColor.toInt(),
+            song.artworkEndColor.toInt(),
+        ),
+    ) {
+        playUri(uri, song.id, song.title, song.artist, artworkBytes)
+    }
+
+    private suspend fun playUri(
+        uri: String,
+        mediaId: String,
+        title: String,
+        artist: String,
+        artworkBytes: ByteArray,
+    ) {
+        val mediaItem = MediaItem.Builder()
+            .setMediaId(mediaId)
+            .setUri(uri)
+            .setMediaMetadata(
+                MediaMetadata.Builder()
+                    .setTitle(title)
+                    .setArtist(artist)
+                    .setArtworkData(artworkBytes, MediaMetadata.PICTURE_TYPE_FRONT_COVER)
+                    .build(),
+            )
+            .build()
+        currentMediaItem = mediaItem
+        val activePlayer = getOrStartPlayer()
+        withContext(Dispatchers.Main) {
+            activePlayer.setMediaItem(mediaItem)
+            activePlayer.prepare()
+            activePlayer.play()
         }
     }
 
     private fun handlePlaybackEnded() {
-        if (_playbackState.value.isRepeat) {
+        val pending = pendingAfterAd
+        if (pending != null) {
+            pendingAfterAd = null
+            scope.launch {
+                withContext(Dispatchers.IO) {
+                    runCatching {
+                        playbackApiService.adComplete(AdCompleteBodyDto(pending.impressionId))
+                    }
+                }
+                _playbackState.update {
+                    it.copy(
+                        isPlayingAd = false,
+                        adTitle = null,
+                        adAdvertiser = null,
+                        progress = 0f,
+                        currentPositionLabel = "0:00",
+                    )
+                }
+                playUri(
+                    uri = pending.streamUrl,
+                    song = pending.song,
+                    artworkBytes = pending.artworkBytes,
+                )
+            }
+        } else if (_playbackState.value.isRepeat) {
             scope.launch {
                 withContext(Dispatchers.Main) {
                     player?.seekTo(0L)

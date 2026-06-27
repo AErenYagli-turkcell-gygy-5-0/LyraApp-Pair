@@ -85,31 +85,51 @@ fun MiniPlayer(
                 )
 
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = song.title,
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                    Text(
-                        text = song.artist,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
+                    if (state.isPlayingAd) {
+                        Text(
+                            text = "Reklam",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.tertiary,
+                            maxLines = 1,
+                        )
+                        Text(
+                            text = state.adTitle ?: "",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    } else {
+                        Text(
+                            text = song.title,
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        Text(
+                            text = song.artist,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
                 }
 
                 IconButton(
                     onClick = { onIntent(PlayerIntent.LikeClicked) },
                     modifier = Modifier.size(36.dp),
+                    enabled = !state.isPlayingAd,
                 ) {
                     Icon(
                         imageVector = if (state.isLiked) LyraIcons.Favorite else LyraIcons.FavoriteOutlined,
                         contentDescription = "Beğeni",
-                        tint = MaterialTheme.colorScheme.primary,
+                        tint = if (state.isPlayingAd) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
+                        else MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(20.dp),
                     )
                 }
@@ -129,11 +149,13 @@ fun MiniPlayer(
                 IconButton(
                     onClick = { onIntent(PlayerIntent.NextClicked) },
                     modifier = Modifier.size(36.dp),
+                    enabled = !state.isPlayingAd,
                 ) {
                     Icon(
                         imageVector = SkipNextIcon,
                         contentDescription = "Sonraki",
-                        tint = MaterialTheme.colorScheme.onSurface,
+                        tint = if (state.isPlayingAd) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                        else MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.size(22.dp),
                     )
                 }

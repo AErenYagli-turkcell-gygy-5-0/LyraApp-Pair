@@ -7,6 +7,9 @@ data class PlayerUiState(
     val isPlaying: Boolean = false,
     val isLiked: Boolean = false,
     val progress: Float = 0f,
+    val isPlayingAd: Boolean = false,
+    val adTitle: String? = null,
+    val adAdvertiser: String? = null,
 )
 
 sealed interface PlayerIntent {

@@ -36,6 +36,9 @@ class PlayerViewModel @Inject constructor(
                         isPlaying = state.isPlaying,
                         isLiked = state.isLiked,
                         progress = state.progress,
+                        isPlayingAd = state.isPlayingAd,
+                        adTitle = state.adTitle,
+                        adAdvertiser = state.adAdvertiser,
                     )
                 }
             }

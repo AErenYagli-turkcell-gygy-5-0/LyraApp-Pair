@@ -6,6 +6,7 @@ import com.turkcell.lyraapp.data.remote.AuthApiService
 import com.turkcell.lyraapp.data.remote.AuthInterceptor
 import com.turkcell.lyraapp.data.remote.HomeApiService
 import com.turkcell.lyraapp.data.remote.MembershipApiService
+import com.turkcell.lyraapp.data.remote.PlaybackApiService
 import com.turkcell.lyraapp.data.remote.SongApiService
 import dagger.Module
 import dagger.Provides
@@ -70,4 +71,9 @@ object NetworkModule {
     @Singleton
     fun provideMembershipApiService(retrofit: Retrofit): MembershipApiService =
         retrofit.create(MembershipApiService::class.java)
+
+    @Provides
+    @Singleton
+    fun providePlaybackApiService(retrofit: Retrofit): PlaybackApiService =
+        retrofit.create(PlaybackApiService::class.java)
 }

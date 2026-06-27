@@ -17,4 +17,7 @@ data class PlaybackState(
     val isRepeat: Boolean = false,
     val progress: Float = 0f,
     val currentPositionLabel: String = "0:00",
+    val isPlayingAd: Boolean = false,
+    val adTitle: String? = null,
+    val adAdvertiser: String? = null,
 )

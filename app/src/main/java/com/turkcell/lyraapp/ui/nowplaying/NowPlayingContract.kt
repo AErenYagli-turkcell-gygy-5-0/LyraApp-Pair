@@ -13,6 +13,9 @@ data class NowPlayingUiState(
     val progress: Float = 0f,
     val currentPositionLabel: String = "0:00",
     val downloadStatus: DownloadStatus = DownloadStatus.NotDownloaded,
+    val isPlayingAd: Boolean = false,
+    val adTitle: String? = null,
+    val adAdvertiser: String? = null,
 )
 
 sealed interface NowPlayingIntent {

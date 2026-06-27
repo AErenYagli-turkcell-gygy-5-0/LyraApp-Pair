@@ -107,7 +107,7 @@ fun NowPlayingScreen(
                 Spacer(Modifier.height(12.dp))
 
                 TopBar(
-                    sourceName = state.sourceName,
+                    sourceName = if (state.isPlayingAd) "REKLAM" else state.sourceName,
                     onCollapse = { onIntent(NowPlayingIntent.CollapseClicked) },
                 )
 
@@ -116,27 +116,36 @@ fun NowPlayingScreen(
                 Artwork(
                     startColor = song?.artworkStartColor ?: 0xFFD98E4A,
                     endColor = song?.artworkEndColor ?: 0xFF8A5526,
+                    isAd = state.isPlayingAd,
                 )
 
                 Spacer(Modifier.height(32.dp))
 
-                SongInfo(
-                    title = song?.title ?: "",
-                    artist = song?.artist ?: "",
-                    isLiked = state.isLiked,
-                    downloadStatus = state.downloadStatus,
-                    onLike = { onIntent(NowPlayingIntent.LikeClicked) },
-                    onDownload = { onIntent(NowPlayingIntent.DownloadClicked) },
-                    onRemoveDownload = { onIntent(NowPlayingIntent.RemoveDownloadClicked) },
-                )
+                if (state.isPlayingAd) {
+                    AdInfo(
+                        adTitle = state.adTitle ?: "",
+                        adAdvertiser = state.adAdvertiser ?: "",
+                    )
+                } else {
+                    SongInfo(
+                        title = song?.title ?: "",
+                        artist = song?.artist ?: "",
+                        isLiked = state.isLiked,
+                        downloadStatus = state.downloadStatus,
+                        onLike = { onIntent(NowPlayingIntent.LikeClicked) },
+                        onDownload = { onIntent(NowPlayingIntent.DownloadClicked) },
+                        onRemoveDownload = { onIntent(NowPlayingIntent.RemoveDownloadClicked) },
+                    )
+                }
 
                 Spacer(Modifier.height(24.dp))
 
                 SeekBar(
                     progress = state.progress,
                     currentLabel = state.currentPositionLabel,
-                    totalLabel = song?.duration ?: "0:00",
+                    totalLabel = if (state.isPlayingAd) "" else (song?.duration ?: "0:00"),
                     onSeek = { onIntent(NowPlayingIntent.SeekTo(it)) },
+                    enabled = !state.isPlayingAd,
                 )
 
                 Spacer(Modifier.height(20.dp))
@@ -145,6 +154,7 @@ fun NowPlayingScreen(
                     isPlaying = state.isPlaying,
                     isShuffle = state.isShuffle,
                     isRepeat = state.isRepeat,
+                    isAdPlaying = state.isPlayingAd,
                     onPlayPause = { onIntent(NowPlayingIntent.PlayPauseClicked) },
                     onNext = { onIntent(NowPlayingIntent.NextClicked) },
                     onPrevious = { onIntent(NowPlayingIntent.PreviousClicked) },
@@ -211,6 +221,7 @@ private fun TopBar(
 private fun Artwork(
     startColor: Long,
     endColor: Long,
+    isAd: Boolean = false,
 ) {
     Box(
         modifier = Modifier
@@ -221,7 +232,43 @@ private fun Artwork(
                     listOf(Color(startColor), Color(endColor)),
                 ),
             ),
-    )
+        contentAlignment = Alignment.Center,
+    ) {
+        if (isAd) {
+            Text(
+                text = "Reklam",
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold,
+                color = Color.White.copy(alpha = 0.7f),
+            )
+        }
+    }
+}
+
+@Composable
+private fun AdInfo(
+    adTitle: String,
+    adAdvertiser: String,
+) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Text(
+            text = "Reklam",
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.tertiary,
+        )
+        Text(
+            text = adTitle,
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+        Text(
+            text = adAdvertiser,
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
 }
 
 @Composable
@@ -329,12 +376,14 @@ private fun SeekBar(
     currentLabel: String,
     totalLabel: String,
     onSeek: (Float) -> Unit,
+    enabled: Boolean = true,
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
         Slider(
             value = progress.coerceIn(0f, 1f),
             onValueChange = onSeek,
             modifier = Modifier.fillMaxWidth(),
+            enabled = enabled,
             colors = SliderDefaults.colors(
                 thumbColor = MaterialTheme.colorScheme.primary,
                 activeTrackColor = MaterialTheme.colorScheme.primary,
@@ -364,31 +413,36 @@ private fun Controls(
     isPlaying: Boolean,
     isShuffle: Boolean,
     isRepeat: Boolean,
+    isAdPlaying: Boolean = false,
     onPlayPause: () -> Unit,
     onNext: () -> Unit,
     onPrevious: () -> Unit,
     onShuffle: () -> Unit,
     onRepeat: () -> Unit,
 ) {
+    val disabledTint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
-        IconButton(onClick = onShuffle) {
+        IconButton(onClick = onShuffle, enabled = !isAdPlaying) {
             Icon(
                 imageVector = ShuffleIcon,
                 contentDescription = "Karıştır",
-                tint = if (isShuffle) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                tint = if (isAdPlaying) disabledTint
+                else if (isShuffle) MaterialTheme.colorScheme.primary
+                else MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(26.dp),
             )
         }
 
-        IconButton(onClick = onPrevious, modifier = Modifier.size(48.dp)) {
+        IconButton(onClick = onPrevious, modifier = Modifier.size(48.dp), enabled = !isAdPlaying) {
             Icon(
                 imageVector = SkipPreviousIcon,
                 contentDescription = "Önceki",
-                tint = MaterialTheme.colorScheme.onSurface,
+                tint = if (isAdPlaying) disabledTint else MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.size(36.dp),
             )
         }
@@ -409,20 +463,22 @@ private fun Controls(
             )
         }
 
-        IconButton(onClick = onNext, modifier = Modifier.size(48.dp)) {
+        IconButton(onClick = onNext, modifier = Modifier.size(48.dp), enabled = !isAdPlaying) {
             Icon(
                 imageVector = SkipNextIcon,
                 contentDescription = "Sonraki",
-                tint = MaterialTheme.colorScheme.onSurface,
+                tint = if (isAdPlaying) disabledTint else MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.size(36.dp),
             )
         }
 
-        IconButton(onClick = onRepeat) {
+        IconButton(onClick = onRepeat, enabled = !isAdPlaying) {
             Icon(
                 imageVector = RepeatIcon,
                 contentDescription = "Tekrar",
-                tint = if (isRepeat) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                tint = if (isAdPlaying) disabledTint
+                else if (isRepeat) MaterialTheme.colorScheme.primary
+                else MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(26.dp),
             )
         }

@@ -432,3 +432,49 @@
   endpoint'lerini sagladi. Fiyatlar API'den dinamik okunur (hardcode yok). Ueyelik durumu `User.membership`
   nullable alani ile tek kaynaktan yonetilir. Popup gosterim kontrolu basit SharedPreferences ile
   saglanir (DataStore overkill — tek key, yanit/istek yok).
+
+### Ad-Gated Playback (playback/next)
+
+- Karar: Sarki calma/gecis akisi `POST /api/v1/me/playback/next` endpoint'ine tasinarak
+  server-otoriter reklam gating mekanizmasi eklendi. Free kullanicilar her 3 sarkida bir reklam alir
+  (sayac server tarafinda); premium kullanicilar daima `type: "song"` alir.
+
+- Son Guncelleme Tarihi: 27.06.2026
+
+- Uygulama:
+  - `data/remote/dto/PlaybackDto.kt` — Yeni DTO dosyasi: `PlaybackNextBodyDto`, `PlaybackNextDataDto`
+    (superset yaklasimi — `type` discriminator ile `ad`/`adStream`/`impressionId` nullable),
+    `AdDto`, `StreamLinkDto`, `AdCompleteBodyDto`, `AdCompleteResponseDto`.
+  - `data/remote/PlaybackApiService.kt` — Yeni Retrofit interface: `POST /me/playback/next`,
+    `POST /me/playback/ad-complete`.
+  - `di/NetworkModule.kt` — `PlaybackApiService` provision eklendi.
+  - `data/playback/PlaybackModels.kt` — `PlaybackState`'e `isPlayingAd`, `adTitle`, `adAdvertiser`
+    alanlari eklendi.
+  - `data/playback/ExoPlayerPlaybackRepository.kt` — `loadAndPlay()` yeniden yazildi:
+    (1) Offline kontrol → yerel dosyadan cal (reklam yok),
+    (2) Online → `playback/next` cagir,
+    (3) `type: "song"` → `stream.url` ile cal,
+    (4) `type: "ad"` → `adStream.url` ile reklam cal, bitis'te `ad-complete` cagir, ardindan
+    `stream.url` ile sarkiyi cal.
+    `homeApiService.recordPlay()` cagrisi kaldirildi (playback/next play'i kaydeder).
+    `SongApiService.getStreamUrl()` artik kullanilmiyor (free tier 403; playback/next stream URL
+    saglar). Reklam sirasinda `next()`, `previous()`, `seekTo()`, `playSong()` engellenir (no-op).
+    `pendingAfterAd` dahili state ile reklam-sarki gecisi yonetilir.
+  - `ui/player/PlayerContract.kt` — `PlayerUiState`'e `isPlayingAd`, `adTitle`, `adAdvertiser` eklendi.
+  - `ui/player/PlayerViewModel.kt` — Reklam state'i `PlaybackState`'ten eslendi.
+  - `ui/player/MiniPlayer.kt` — Reklam sirasinda: baslik yerine "Reklam" etiketi + reklam basligi,
+    like ve skip butonlari `enabled = false`.
+  - `ui/nowplaying/NowPlayingContract.kt` — `NowPlayingUiState`'e reklam alanlari eklendi.
+  - `ui/nowplaying/NowPlayingViewModel.kt` — Reklam state'i eslendi.
+  - `ui/nowplaying/NowPlayingScreen.kt` — Reklam sirasinda: artwork uzerine "Reklam" overlay,
+    `AdInfo` composable (reklam basligi + advertiser), seek bar devre disi, shuffle/previous/next/repeat
+    butonlari devre disi, play/pause aktif kalir.
+
+- Bagimliliklar: Yeni kutuphane yok. Mevcut Retrofit + Moshi + Hilt yeterli.
+
+- Sebep: Backend API (`docs/api/openapi.json`) `POST /me/playback/next` ve `POST /me/playback/ad-complete`
+  endpoint'lerini saglar. Reklam gating server tarafinda yonetilir; client yalnizca yanit tipine
+  gore reklam veya sarki calar. `stream-url` endpoint'i artik premium-only oldugu icin (free tier 403)
+  tum online calma akisi `playback/next` uzerinden gecmek zorundadir. Offline calmada reklam uygulanmaz
+  (yerel dosya dogrudan calinir). `recordPlay()` cagrisi kaldirildi cunku playback/next play'i
+  otomatik kaydeder (cift kayit onlenir).
