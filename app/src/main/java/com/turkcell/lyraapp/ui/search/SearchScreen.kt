@@ -40,21 +40,13 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.turkcell.lyraapp.data.search.Genre
 import com.turkcell.lyraapp.data.search.SearchFilter
 import com.turkcell.lyraapp.ui.icons.LyraIcons
-import com.turkcell.lyraapp.ui.theme.LyraAppTheme
 
-/**
- * Arama akışının durumlu (stateful) giriş noktası.
- *
- * [SearchViewModel]'i Hilt'ten alır, durumu yaşam döngüsüne duyarlı şekilde toplar ve
- * tek seferlik [SearchEffect]'leri tüketir.
- */
 @Composable
 fun SearchRoute(
     modifier: Modifier = Modifier,
@@ -79,11 +71,6 @@ fun SearchRoute(
     )
 }
 
-/**
- * Arama ekranı: sorgu alanı + filtre chip'leri + "Türlere göz at" 2 sütunlu grid.
- *
- * Tamamen durumsuzdur; durumu [state] üzerinden alır, etkileşimleri [onIntent] ile yayımlar.
- */
 @Composable
 fun SearchScreen(
     state: SearchUiState,
@@ -315,32 +302,3 @@ private fun DecorativeCircles() {
     }
 }
 
-private val previewState = SearchUiState(
-    selectedFilter = SearchFilter.All,
-    genres = listOf(
-        Genre("g-1", "Pop", 0xFF00C9A7, 0xFF005F73),
-        Genre("g-2", "Elektronik", 0xFF9B79F5, 0xFF5B3FA0),
-        Genre("g-3", "Akustik", 0xFF8B5CF6, 0xFF5B21B6, hasDecorativeCircles = true),
-        Genre("g-4", "Lo-fi", 0xFF2DD4BF, 0xFF0D9488),
-        Genre("g-5", "Indie", 0xFF6366F1, 0xFF3730A3, hasDecorativeCircles = true),
-        Genre("g-6", "Jazz", 0xFF22C55E, 0xFF15803D),
-        Genre("g-7", "Klasik", 0xFFEC4899, 0xFFBE185D, hasDecorativeCircles = true),
-        Genre("g-8", "Yolculuk", 0xFFF97316, 0xFFEA580C),
-    ),
-)
-
-@Preview(name = "Search - Dark", showBackground = true, showSystemUi = true)
-@Composable
-private fun SearchScreenDarkPreview() {
-    LyraAppTheme(darkTheme = true) {
-        SearchScreen(state = previewState, onIntent = {})
-    }
-}
-
-@Preview(name = "Search - Light", showBackground = true, showSystemUi = true)
-@Composable
-private fun SearchScreenLightPreview() {
-    LyraAppTheme(darkTheme = false) {
-        SearchScreen(state = previewState, onIntent = {})
-    }
-}

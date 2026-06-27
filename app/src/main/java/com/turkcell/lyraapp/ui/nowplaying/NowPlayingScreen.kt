@@ -40,20 +40,18 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.PathParser
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.turkcell.lyraapp.data.download.DownloadStatus
 import com.turkcell.lyraapp.data.playback.Song
 import com.turkcell.lyraapp.ui.icons.LyraIcons
-import com.turkcell.lyraapp.ui.theme.LyraAppTheme
 
 @Composable
 fun NowPlayingRoute(
-    onCollapse: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: NowPlayingViewModel = hiltViewModel(),
+    onCollapse: () -> Unit,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -587,57 +585,3 @@ private val QueueMusicIcon: ImageVector by lazy {
     )
 }
 
-private val previewState = NowPlayingUiState(
-    currentSong = Song(
-        id = "ps-1",
-        title = "Neon Sokaklar",
-        artist = "Şehir Işıkları",
-        duration = "3:43",
-        artworkStartColor = 0xFFD98E4A,
-        artworkEndColor = 0xFF8A5526,
-    ),
-    sourceName = "Gece Vardiyası",
-    isPlaying = true,
-    isLiked = true,
-    progress = 0.41f,
-    currentPositionLabel = "1:33",
-    downloadStatus = DownloadStatus.NotDownloaded,
-)
-
-@Preview(name = "NowPlaying - Dark", showBackground = true, showSystemUi = true)
-@Composable
-private fun NowPlayingDarkPreview() {
-    LyraAppTheme(darkTheme = true) {
-        NowPlayingScreen(state = previewState, onIntent = {})
-    }
-}
-
-@Preview(name = "NowPlaying - Light", showBackground = true, showSystemUi = true)
-@Composable
-private fun NowPlayingLightPreview() {
-    LyraAppTheme(darkTheme = false) {
-        NowPlayingScreen(state = previewState.copy(isPlaying = false), onIntent = {})
-    }
-}
-
-@Preview(name = "NowPlaying - Downloading", showBackground = true, showSystemUi = true)
-@Composable
-private fun NowPlayingDownloadingPreview() {
-    LyraAppTheme(darkTheme = true) {
-        NowPlayingScreen(
-            state = previewState.copy(downloadStatus = DownloadStatus.Downloading(0.6f)),
-            onIntent = {},
-        )
-    }
-}
-
-@Preview(name = "NowPlaying - Downloaded", showBackground = true, showSystemUi = true)
-@Composable
-private fun NowPlayingDownloadedPreview() {
-    LyraAppTheme(darkTheme = true) {
-        NowPlayingScreen(
-            state = previewState.copy(downloadStatus = DownloadStatus.Downloaded),
-            onIntent = {},
-        )
-    }
-}

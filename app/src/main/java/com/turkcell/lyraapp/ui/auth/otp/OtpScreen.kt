@@ -40,20 +40,18 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.turkcell.lyraapp.ui.icons.LyraIcons
-import com.turkcell.lyraapp.ui.theme.LyraAppTheme
 
 @Composable
 fun OtpRoute(
-    onNavigateToHome: () -> Unit,
-    onNavigateToCompleteProfile: (phoneNumber: String) -> Unit,
-    onNavigateBack: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: OtpViewModel = hiltViewModel(),
+    onNavigateBack: () -> Unit,
+    onNavigateToHome: () -> Unit,
+    onNavigateToCompleteProfile: (phoneNumber: String) -> Unit,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -289,28 +287,3 @@ private fun formatPhoneForDisplay(phone: String): String {
     return "+${digits.substring(0, 2)} ${digits.substring(2, 5)} ${digits.substring(5, 8)} ${digits.substring(8, 10)} ${digits.substring(10, 12)}"
 }
 
-@Preview(name = "OTP - Dark", showBackground = true, showSystemUi = true)
-@Composable
-private fun OtpScreenDarkPreview() {
-    LyraAppTheme(darkTheme = true) {
-        OtpScreen(
-            state = OtpUiState(
-                phoneNumber = "+905321456789",
-                digits = listOf("4", "8", "1", "9", "2", "0"),
-                isVerifyEnabled = true,
-            ),
-            onIntent = {},
-        )
-    }
-}
-
-@Preview(name = "OTP - Empty", showBackground = true, showSystemUi = true)
-@Composable
-private fun OtpScreenEmptyPreview() {
-    LyraAppTheme(darkTheme = true) {
-        OtpScreen(
-            state = OtpUiState(phoneNumber = "+905321456789"),
-            onIntent = {},
-        )
-    }
-}

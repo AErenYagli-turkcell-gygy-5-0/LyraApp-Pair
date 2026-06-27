@@ -26,17 +26,15 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.PathParser
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.turkcell.lyraapp.data.playback.Song
 import com.turkcell.lyraapp.ui.icons.LyraIcons
-import com.turkcell.lyraapp.ui.theme.LyraAppTheme
 
 @Composable
 fun MiniPlayer(
     state: PlayerUiState,
-    onIntent: (PlayerIntent) -> Unit,
     modifier: Modifier = Modifier,
+    onIntent: (PlayerIntent) -> Unit,
 ) {
     val song = state.currentSong ?: return
 
@@ -188,33 +186,3 @@ private val SkipNextIcon: ImageVector by lazy {
     buildIcon("SkipNext", "M6,18l8.5,-6L6,6v12zM16,6v12h2V6h-2z")
 }
 
-private val previewSong = Song(
-    id = "1",
-    title = "Neon Sokaklar",
-    artist = "Şehir Işıkları",
-    duration = "3:43",
-    artworkStartColor = 0xFFD98E4A,
-    artworkEndColor = 0xFF8A5526,
-)
-
-@Preview(name = "MiniPlayer - Dark", showBackground = true, backgroundColor = 0xFF1C1B1F)
-@Composable
-private fun MiniPlayerDarkPreview() {
-    LyraAppTheme(darkTheme = true) {
-        MiniPlayer(
-            state = PlayerUiState(currentSong = previewSong, isPlaying = true, progress = 0.42f),
-            onIntent = {},
-        )
-    }
-}
-
-@Preview(name = "MiniPlayer - Light", showBackground = true)
-@Composable
-private fun MiniPlayerLightPreview() {
-    LyraAppTheme(darkTheme = false) {
-        MiniPlayer(
-            state = PlayerUiState(currentSong = previewSong, isPlaying = false, isLiked = true, progress = 0.42f),
-            onIntent = {},
-        )
-    }
-}

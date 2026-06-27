@@ -38,26 +38,18 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.PathParser
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.turkcell.lyraapp.data.likedsongs.LikedSong
 import com.turkcell.lyraapp.ui.icons.LyraIcons
-import com.turkcell.lyraapp.ui.theme.LyraAppTheme
 
-/**
- * Beğenilen Şarkılar akışının durumlu (stateful) giriş noktası.
- *
- * Favoriler üst düzey sekmesinden ve Kütüphane'deki "Beğenilen Şarkılar" satırından ulaşılır.
- * [onBack] Favoriler sekmesinde no-op, Kütüphane akışında geri navigasyon lambdası taşır.
- */
 @Composable
 fun LikedSongsRoute(
-    onBack: () -> Unit,
-    onNavigateToNowPlaying: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: LikedSongsViewModel = hiltViewModel(),
+    onBack: () -> Unit,
+    onNavigateToNowPlaying: () -> Unit,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
@@ -77,11 +69,6 @@ fun LikedSongsRoute(
     )
 }
 
-/**
- * Beğenilen Şarkılar ekranı: kapak + başlık + aksiyon satırı + şarkı listesi.
- *
- * Tamamen durumsuzdur; durumu [state] üzerinden alır, etkileşimleri [onIntent] ile yayımlar.
- */
 @Composable
 fun LikedSongsScreen(
     state: LikedSongsUiState,
@@ -350,31 +337,3 @@ private val DownloadIcon: ImageVector by lazy {
     )
 }
 
-private val previewState = LikedSongsUiState(
-    songCount = 5,
-    totalDuration = "19 dk",
-    currentlyPlayingId = "ls-4",
-    songs = listOf(
-        LikedSong("ls-1", "Gece Yarısı", "Mavi Deniz", "3:34", 0xFF4AC2A8, 0xFF1F6E5C),
-        LikedSong("ls-2", "Yıldız Tozu", "Polaris", "4:07", 0xFF5AAFC9, 0xFF2A5F73),
-        LikedSong("ls-3", "İlk Işık", "Sabah Ezgisi", "3:25", 0xFF5AAFC9, 0xFF2A6080),
-        LikedSong("ls-4", "Neon Sokaklar", "Şehir Işıkları", "3:43", 0xFFD98E4A, 0xFF8A5526, isPlaying = true),
-        LikedSong("ls-5", "Derin Mavi", "Okyanus", "4:29", 0xFF4AC2A8, 0xFF1F6E5C),
-    ),
-)
-
-@Preview(name = "LikedSongs - Dark", showBackground = true, showSystemUi = true)
-@Composable
-private fun LikedSongsScreenDarkPreview() {
-    LyraAppTheme(darkTheme = true) {
-        LikedSongsScreen(state = previewState, onIntent = {})
-    }
-}
-
-@Preview(name = "LikedSongs - Light", showBackground = true, showSystemUi = true)
-@Composable
-private fun LikedSongsScreenLightPreview() {
-    LyraAppTheme(darkTheme = false) {
-        LikedSongsScreen(state = previewState, onIntent = {})
-    }
-}

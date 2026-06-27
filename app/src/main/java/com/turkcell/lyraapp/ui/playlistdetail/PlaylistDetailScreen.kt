@@ -39,21 +39,19 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.PathParser
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.turkcell.lyraapp.data.playlistdetail.PlaylistDetail
 import com.turkcell.lyraapp.data.playlistdetail.PlaylistSong
 import com.turkcell.lyraapp.ui.icons.LyraIcons
-import com.turkcell.lyraapp.ui.theme.LyraAppTheme
 
 @Composable
 fun PlaylistDetailRoute(
-    onNavigateBack: () -> Unit,
-    onNavigateToNowPlaying: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: PlaylistDetailViewModel = hiltViewModel(),
+    onNavigateBack: () -> Unit,
+    onNavigateToNowPlaying: () -> Unit,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -390,42 +388,3 @@ private val AddCircleOutlineIcon: ImageVector by lazy {
     )
 }
 
-private val previewPlaylist = PlaylistDetail(
-    id = "pl-gece",
-    title = "Gece Sürüşü",
-    description = "Karanlık yollar için synth-pop",
-    ownerName = "Zeynep Kaya",
-    songCount = 5,
-    totalDuration = "23 dk",
-    artworkStartColor = 0xFF8B6FB8,
-    artworkEndColor = 0xFF4A3D6B,
-    songs = listOf(
-        PlaylistSong("ps-1", "Neon Sokaklar", "Şehir Işıkları", "3:43", 0xFFD98E4A, 0xFF8A5526, isLiked = true, isPlaying = true),
-        PlaylistSong("ps-2", "Gece Yarısı", "Mavi Deniz", "3:34", 0xFF4AC2A8, 0xFF1F6E5C, isLiked = true),
-        PlaylistSong("ps-3", "Mor Bulutlar", "Derin Kaya", "3:52", 0xFF9B7FC4, 0xFF5A4480),
-        PlaylistSong("ps-4", "Son Tren", "Peron", "3:37", 0xFF6B5FB8, 0xFF3A3270),
-        PlaylistSong("ps-5", "Yıldız Tozu", "Polaris", "4:07", 0xFF5AAFC9, 0xFF2A5F73, isLiked = true),
-    ),
-)
-
-@Preview(name = "PlaylistDetail - Dark", showBackground = true, showSystemUi = true)
-@Composable
-private fun PlaylistDetailDarkPreview() {
-    LyraAppTheme(darkTheme = true) {
-        PlaylistDetailScreen(
-            state = PlaylistDetailUiState(playlist = previewPlaylist, currentlyPlayingId = "ps-1"),
-            onIntent = {},
-        )
-    }
-}
-
-@Preview(name = "PlaylistDetail - Light", showBackground = true, showSystemUi = true)
-@Composable
-private fun PlaylistDetailLightPreview() {
-    LyraAppTheme(darkTheme = false) {
-        PlaylistDetailScreen(
-            state = PlaylistDetailUiState(playlist = previewPlaylist),
-            onIntent = {},
-        )
-    }
-}

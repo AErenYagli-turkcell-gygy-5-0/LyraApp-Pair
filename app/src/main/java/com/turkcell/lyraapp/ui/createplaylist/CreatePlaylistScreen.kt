@@ -46,12 +46,10 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.PathParser
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.turkcell.lyraapp.data.createplaylist.AvailableSong
-import com.turkcell.lyraapp.ui.theme.LyraAppTheme
 
 @Composable
 fun CreatePlaylistRoute(
@@ -459,37 +457,3 @@ private val CheckIcon: ImageVector by lazy {
     buildIcon("Check", "M9,16.17L4.83,12l-1.42,1.41L9,19 21,7l-1.41,-1.41z")
 }
 
-private val previewSongs = listOf(
-    AvailableSong("as-1", "Gece Yarısı", "Mavi Deniz", 0xFF4AC2A8, 0xFF1F6E5C),
-    AvailableSong("as-2", "Sessiz Şehir", "Ela Tuna", 0xFF9B7FC4, 0xFF5A4480),
-    AvailableSong("as-3", "Yıldız Tozu", "Polaris", 0xFF5AAFC9, 0xFF2A5F73),
-    AvailableSong("as-4", "Sahil Yolu", "Kumsal", 0xFF4AC2A8, 0xFF1F6E5C),
-)
-
-@Preview(name = "CreatePlaylist - Dark", showBackground = true, showSystemUi = true)
-@Composable
-private fun CreatePlaylistDarkPreview() {
-    LyraAppTheme(darkTheme = true) {
-        CreatePlaylistScreen(
-            state = CreatePlaylistUiState(
-                availableSongs = previewSongs,
-                selectedSongIds = setOf("as-1", "as-3"),
-                name = "Gece Karışımı",
-                isPublic = true,
-                isSaveEnabled = true,
-            ),
-            onIntent = {},
-        )
-    }
-}
-
-@Preview(name = "CreatePlaylist - Light", showBackground = true, showSystemUi = true)
-@Composable
-private fun CreatePlaylistLightPreview() {
-    LyraAppTheme(darkTheme = false) {
-        CreatePlaylistScreen(
-            state = CreatePlaylistUiState(availableSongs = previewSongs),
-            onIntent = {},
-        )
-    }
-}

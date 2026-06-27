@@ -10,17 +10,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import com.turkcell.lyraapp.ui.icons.LyraIcons
-import com.turkcell.lyraapp.ui.theme.LyraAppTheme
 
-/**
- * Alt gezinme çubuğundaki üst düzey sekmelerin tek doğruluk kaynağı.
- *
- * Her sekme bir [LyraDestination]'a, bir etikete ve seçili/seçimsiz ikon çiftine
- * eşlenir. Sıralama, çubuktaki görünüm sırasıdır. Yeni bir sekme eklendiğinde
- * buraya bir giriş eklenir; [LyraBottomBar] ve görünürlük kontrolü otomatik uyum sağlar.
- */
 enum class LyraBottomBarTab(
     val destination: LyraDestination,
     val label: String,
@@ -34,18 +25,9 @@ enum class LyraBottomBarTab(
     Profile(LyraDestination.Profile, "Profil", LyraIcons.Person, LyraIcons.PersonOutlined),
 }
 
-/** [route]'un alt gezinme çubuğu gösterilen bir üst düzey sekme rotası olup olmadığı. */
 fun isTopLevelRoute(route: String?): Boolean =
     LyraBottomBarTab.entries.any { it.destination.route == route }
 
-/**
- * Uygulamanın alt gezinme çubuğu (bottom navigation bar).
- *
- * Navigasyon iskeletinin (chrome) parçasıdır; durum sahibi değildir ve MVI sözleşmesi
- * gerektirmez: seçili sekme [currentRoute] üzerinden (nav back stack'ten) türetilir,
- * tıklamalar [onTabSelected] ile yukarı yayılır. Renkler temadan okunur; seçili öğe
- * `primaryContainer` hap göstergesi ile vurgulanır.
- */
 @Composable
 fun LyraBottomBar(
     currentRoute: String?,
@@ -86,24 +68,3 @@ fun LyraBottomBar(
     }
 }
 
-@Preview(name = "BottomBar - Dark", showBackground = true)
-@Composable
-private fun LyraBottomBarDarkPreview() {
-    LyraAppTheme(darkTheme = true) {
-        LyraBottomBar(
-            currentRoute = LyraDestination.Home.route,
-            onTabSelected = {},
-        )
-    }
-}
-
-@Preview(name = "BottomBar - Light", showBackground = true)
-@Composable
-private fun LyraBottomBarLightPreview() {
-    LyraAppTheme(darkTheme = false) {
-        LyraBottomBar(
-            currentRoute = LyraDestination.Search.route,
-            onTabSelected = {},
-        )
-    }
-}

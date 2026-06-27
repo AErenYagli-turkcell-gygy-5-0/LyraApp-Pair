@@ -35,20 +35,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.turkcell.lyraapp.data.library.LibraryPlaylist
 import com.turkcell.lyraapp.ui.icons.LyraIcons
-import com.turkcell.lyraapp.ui.theme.LyraAppTheme
 
-/**
- * Kütüphane akışının durumlu (stateful) giriş noktası.
- *
- * "Beğenilen Şarkılar" öğesine tıklanması [LibraryEffect.NavigateToLikedSongs] üretir;
- * bu Effect NavHost tarafından tüketilerek Favoriler sekmesine yönlendirir.
- */
 @Composable
 fun LibraryRoute(
     onNavigateToLikedSongs: () -> Unit,
@@ -79,11 +71,6 @@ fun LibraryRoute(
     )
 }
 
-/**
- * Kütüphane ekranı: başlık + filtre sekmeleri + sıralama satırı + çalma listesi.
- *
- * Tamamen durumsuzdur; durumu [state] üzerinden alır, etkileşimleri [onIntent] ile yayımlar.
- */
 @Composable
 fun LibraryScreen(
     state: LibraryUiState,
@@ -327,30 +314,3 @@ private fun PlaylistArtwork(playlist: LibraryPlaylist) {
     }
 }
 
-private val previewState = LibraryUiState(
-    selectedTab = LibraryTab.Playlists,
-    playlists = listOf(
-        LibraryPlaylist("pl-liked", "Beğenilen Şarkılar", 5, 0xFFFFB1C8, 0xFFFF6B9D, isPinned = true, isLikedSongs = true),
-        LibraryPlaylist("pl-1", "Gece Sürüşü", 6, 0xFF8B6FB8, 0xFF4A3D6B),
-        LibraryPlaylist("pl-2", "Sabah Kahvesi", 5, 0xFF7C83D9, 0xFF3E4486),
-        LibraryPlaylist("pl-3", "Odaklan", 5, 0xFF4AC2A8, 0xFF1F6E5C),
-        LibraryPlaylist("pl-4", "Yaz Anıları", 5, 0xFF5AAFC9, 0xFF2A5F73),
-        LibraryPlaylist("pl-5", "Akustik Akşam", 4, 0xFF4AC2A8, 0xFF1F6E5C),
-    ),
-)
-
-@Preview(name = "Library - Dark", showBackground = true, showSystemUi = true)
-@Composable
-private fun LibraryScreenDarkPreview() {
-    LyraAppTheme(darkTheme = true) {
-        LibraryScreen(state = previewState, onIntent = {})
-    }
-}
-
-@Preview(name = "Library - Light", showBackground = true, showSystemUi = true)
-@Composable
-private fun LibraryScreenLightPreview() {
-    LyraAppTheme(darkTheme = false) {
-        LibraryScreen(state = previewState, onIntent = {})
-    }
-}

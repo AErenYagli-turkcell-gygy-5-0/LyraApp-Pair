@@ -46,7 +46,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -58,16 +57,15 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.turkcell.lyraapp.data.home.HomeSong
 import com.turkcell.lyraapp.data.membership.MembershipPlan
 import com.turkcell.lyraapp.ui.icons.LyraIcons
-import com.turkcell.lyraapp.ui.theme.LyraAppTheme
 
 @Composable
 fun HomeRoute(
+    modifier: Modifier = Modifier,
+    viewModel: HomeViewModel = hiltViewModel(),
     onNavigateToProfile: () -> Unit,
     onNavigateToNowPlaying: () -> Unit,
     onNavigateToPremium: () -> Unit = {},
-    onNavigateToPayment: (planType: String) -> Unit = {},
-    modifier: Modifier = Modifier,
-    viewModel: HomeViewModel = hiltViewModel(),
+    onNavigateToPayment: (planType: String) -> Unit = {}, 
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -549,70 +547,6 @@ private fun Artwork(
                 ),
             ),
     )
-}
-
-private val previewState = HomeUiState(
-    greeting = "İyi akşamlar",
-    userInitials = "ZK",
-    isDarkTheme = false,
-    forYouSongs = listOf(
-        HomeSong("s_neon-tide", "Neon Tide", "Aurora Drift", "City Lights", 32000, 0xFF8B6FB8, 0xFF4A3D6B),
-        HomeSong("s_solar-flare", "Solar Flare", "Neon Pulse", "Cosmic Rays", 28000, 0xFF7C83D9, 0xFF3E4486),
-        HomeSong("s_kervan", "Kervan", "City Echo", "Yolculuk", 45000, 0xFFD98E4A, 0xFF8A5526),
-        HomeSong("s_midnight-run", "Midnight Run", "Deep Wave", "Night Shift", 38000, 0xFF4AC2A8, 0xFF1F6E5C),
-        HomeSong("s_ocean-drive", "Ocean Drive", "Solar Flare", "Summer Nights", 41000, 0xFF6FBF5A, 0xFF356B2A),
-        HomeSong("s_starlight", "Starlight", "Cosmo Beat", "Galaxy", 35000, 0xFF5AAFC9, 0xFF2A5F73),
-    ),
-    recentlyPlayedSongs = listOf(
-        HomeSong("s_neon-tide", "Neon Tide", "Aurora Drift", "City Lights", 32000, 0xFFD98E4A, 0xFF8A5526),
-        HomeSong("s_ocean-drive", "Ocean Drive", "Solar Flare", "Summer Nights", 41000, 0xFF6FBF5A, 0xFF356B2A),
-        HomeSong("s_starlight", "Starlight", "Cosmo Beat", "Galaxy", 35000, 0xFF3D5A80, 0xFF1B2A45),
-    ),
-    recommendationSongs = listOf(
-        HomeSong("s_midnight-run", "Midnight Run", "Deep Wave", "Night Shift", 38000, 0xFF9B7FC4, 0xFF5A4480),
-        HomeSong("s_solar-flare", "Solar Flare", "Neon Pulse", "Cosmic Rays", 28000, 0xFF6B5FB8, 0xFF3A3270),
-        HomeSong("s_kervan", "Kervan", "City Echo", "Yolculuk", 45000, 0xFF3FAE9C, 0xFF1E5D52),
-    ),
-    downloadedSongs = listOf(
-        HomeSong("s_neon-tide", "Neon Tide", "Aurora Drift", null, 0, 0xFF8B6FB8, 0xFF4A3D6B),
-        HomeSong("s_ocean-drive", "Ocean Drive", "Solar Flare", null, 0, 0xFF6FBF5A, 0xFF356B2A),
-    ),
-)
-
-@Preview(name = "Home - Dark", showBackground = true, showSystemUi = true)
-@Composable
-private fun HomeScreenDarkPreview() {
-    LyraAppTheme(darkTheme = true) {
-        HomeScreen(state = previewState.copy(isDarkTheme = true), onIntent = {}, onNavigateToProfile = {})
-    }
-}
-
-@Preview(name = "Home - Light", showBackground = true, showSystemUi = true)
-@Composable
-private fun HomeScreenLightPreview() {
-    LyraAppTheme(darkTheme = false) {
-        HomeScreen(state = previewState, onIntent = {}, onNavigateToProfile = {})
-    }
-}
-
-@Preview(name = "Home - Loading", showBackground = true, showSystemUi = true)
-@Composable
-private fun HomeScreenLoadingPreview() {
-    LyraAppTheme(darkTheme = true) {
-        HomeScreen(state = HomeUiState(isLoading = true, isDarkTheme = true), onIntent = {}, onNavigateToProfile = {})
-    }
-}
-
-@Preview(name = "Home - Error", showBackground = true, showSystemUi = true)
-@Composable
-private fun HomeScreenErrorPreview() {
-    LyraAppTheme(darkTheme = true) {
-        HomeScreen(
-            state = HomeUiState(errorMessage = "Baglanti hatasi. Lutfen tekrar deneyin.", isDarkTheme = true),
-            onIntent = {},
-            onNavigateToProfile = {},
-        )
-    }
 }
 
 @Composable

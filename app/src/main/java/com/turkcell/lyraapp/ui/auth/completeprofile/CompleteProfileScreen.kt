@@ -33,19 +33,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.turkcell.lyraapp.ui.icons.LyraIcons
-import com.turkcell.lyraapp.ui.theme.LyraAppTheme
 
 @Composable
 fun CompleteProfileRoute(
-    onNavigateToHome: () -> Unit,
-    onNavigateBack: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: CompleteProfileViewModel = hiltViewModel(),
+    onNavigateBack: () -> Unit,
+    onNavigateToHome: () -> Unit,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -277,31 +275,3 @@ private fun SubmitButton(
     }
 }
 
-@Preview(name = "CompleteProfile - Dark", showBackground = true, showSystemUi = true)
-@Composable
-private fun CompleteProfileScreenDarkPreview() {
-    LyraAppTheme(darkTheme = true) {
-        CompleteProfileScreen(
-            state = CompleteProfileUiState(
-                firstName = "Zeynep",
-                lastName = "Kaya",
-                birthDay = "14",
-                birthMonth = "06",
-                birthYear = "1998",
-                isSubmitEnabled = true,
-            ),
-            onIntent = {},
-        )
-    }
-}
-
-@Preview(name = "CompleteProfile - Empty", showBackground = true, showSystemUi = true)
-@Composable
-private fun CompleteProfileScreenEmptyPreview() {
-    LyraAppTheme(darkTheme = true) {
-        CompleteProfileScreen(
-            state = CompleteProfileUiState(),
-            onIntent = {},
-        )
-    }
-}

@@ -25,16 +25,14 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.turkcell.lyraapp.ui.icons.LyraIcons
-import com.turkcell.lyraapp.ui.theme.LyraAppTheme
 
 @Composable
 fun PremiumSuccessScreen(
     durationDays: Int,
-    onStartListening: () -> Unit,
     modifier: Modifier = Modifier,
+    onStartListening: () -> Unit,
 ) {
     val bgGradient = Brush.verticalGradient(
         colors = listOf(
@@ -147,24 +145,3 @@ fun PremiumSuccessScreen(
     }
 }
 
-@Preview(name = "Premium Success - Dark", showBackground = true, showSystemUi = true)
-@Composable
-private fun PremiumSuccessScreenDarkPreview() {
-    LyraAppTheme(darkTheme = true) {
-        PremiumSuccessScreen(
-            durationDays = 30,
-            onStartListening = {},
-        )
-    }
-}
-
-@Preview(name = "Premium Success - Light", showBackground = true, showSystemUi = true)
-@Composable
-private fun PremiumSuccessScreenLightPreview() {
-    LyraAppTheme(darkTheme = false) {
-        PremiumSuccessScreen(
-            durationDays = 30,
-            onStartListening = {},
-        )
-    }
-}

@@ -38,19 +38,17 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.turkcell.lyraapp.data.profile.SettingItem
 import com.turkcell.lyraapp.ui.icons.LyraIcons
-import com.turkcell.lyraapp.ui.theme.LyraAppTheme
 
 @Composable
 fun ProfileRoute(
-    onNavigateToPremium: () -> Unit = {},
     modifier: Modifier = Modifier,
     viewModel: ProfileViewModel = hiltViewModel(),
+    onNavigateToPremium: () -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -476,54 +474,3 @@ private fun settingIconFor(settingId: String): ImageVector = when (settingId) {
     else -> LyraIcons.ArrowForward
 }
 
-private val previewState = ProfileUiState(
-    initials = "ZK",
-    fullName = "Zeynep Kaya",
-    username = "@zeynepk",
-    isPremium = true,
-    premiumDaysLeft = 3,
-    membershipType = "one-time",
-    playlistCount = "127",
-    followerCount = "1.2B",
-    followingCount = "348",
-    isDarkTheme = false,
-    settings = listOf(
-        SettingItem("sound_quality", "Ses kalitesi", "Yüksek"),
-        SettingItem("offline_download", "Çevrimdışı indirme", "Açık"),
-        SettingItem("notifications", "Bildirimler"),
-        SettingItem("privacy", "Gizlilik"),
-        SettingItem("help", "Yardım ve destek"),
-    ),
-)
-
-@Preview(name = "Profile - Premium - Dark", showBackground = true, showSystemUi = true)
-@Composable
-private fun ProfileScreenPremiumDarkPreview() {
-    LyraAppTheme(darkTheme = true) {
-        ProfileScreen(state = previewState.copy(isDarkTheme = true), onIntent = {})
-    }
-}
-
-@Preview(name = "Profile - Free - Dark", showBackground = true, showSystemUi = true)
-@Composable
-private fun ProfileScreenFreeDarkPreview() {
-    LyraAppTheme(darkTheme = true) {
-        ProfileScreen(
-            state = previewState.copy(
-                isPremium = false,
-                premiumDaysLeft = 0,
-                membershipType = null,
-                isDarkTheme = true,
-            ),
-            onIntent = {},
-        )
-    }
-}
-
-@Preview(name = "Profile - Premium - Light", showBackground = true, showSystemUi = true)
-@Composable
-private fun ProfileScreenPremiumLightPreview() {
-    LyraAppTheme(darkTheme = false) {
-        ProfileScreen(state = previewState, onIntent = {})
-    }
-}

@@ -33,18 +33,15 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.turkcell.lyraapp.ui.icons.LyraIcons
-import com.turkcell.lyraapp.ui.theme.LyraAppTheme
-
 @Composable
 fun LoginRoute(
-    onNavigateToOtp: (phoneNumber: String, firstTime: Boolean) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: LoginViewModel = hiltViewModel(),
+    onNavigateToOtp: (phoneNumber: String, firstTime: Boolean) -> Unit,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -69,9 +66,9 @@ fun LoginRoute(
 @Composable
 fun LoginScreen(
     state: LoginUiState,
-    onIntent: (LoginIntent) -> Unit,
     modifier: Modifier = Modifier,
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
+    onIntent: (LoginIntent) -> Unit,
 ) {
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -204,21 +201,3 @@ private fun ContinueButton(
     }
 }
 
-@Preview(name = "Login - Dark", showBackground = true, showSystemUi = true)
-@Composable
-private fun LoginScreenDarkPreview() {
-    LyraAppTheme(darkTheme = true) {
-        LoginScreen(
-            state = LoginUiState(phoneNumber = "532 145 67 89", isContinueEnabled = true),
-            onIntent = {},
-        )
-    }
-}
-
-@Preview(name = "Login - Light", showBackground = true, showSystemUi = true)
-@Composable
-private fun LoginScreenLightPreview() {
-    LyraAppTheme(darkTheme = false) {
-        LoginScreen(state = LoginUiState(), onIntent = {})
-    }
-}

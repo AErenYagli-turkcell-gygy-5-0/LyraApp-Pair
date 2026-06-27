@@ -40,20 +40,18 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.turkcell.lyraapp.data.membership.MembershipPlan
 import com.turkcell.lyraapp.ui.icons.LyraIcons
-import com.turkcell.lyraapp.ui.theme.LyraAppTheme
 
 @Composable
 fun PaymentRoute(
-    onPaymentSuccess: (durationDays: Int) -> Unit,
-    onNavigateBack: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: PaymentViewModel = hiltViewModel(),
+    onNavigateBack: () -> Unit,
+    onPaymentSuccess: (durationDays: Int) -> Unit,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -458,46 +456,3 @@ private fun OrderSummary(plan: MembershipPlan) {
 }
 
 private fun formatPriceFull(priceLira: Int): String = "₺${priceLira},99"
-
-private val previewPlan = MembershipPlan(
-    id = "recurring-monthly",
-    type = "recurring",
-    name = "Premium (Aylık Yenilenen)",
-    description = "Aylık otomatik yenilenen premium abonelik",
-    priceKurus = 5999,
-    priceLira = 59,
-    currency = "TRY",
-    durationDays = 30,
-    autoRenew = true,
-)
-
-@Preview(name = "Payment - Dark", showBackground = true, showSystemUi = true)
-@Composable
-private fun PaymentScreenDarkPreview() {
-    LyraAppTheme(darkTheme = true) {
-        PaymentScreen(
-            state = PaymentUiState(
-                plan = previewPlan,
-                cardNumber = "4242 4242 4242 4242",
-                holderName = "Zeynep Kaya",
-                expiry = "12/30",
-                cvc = "123",
-                isFormValid = true,
-            ),
-            onIntent = {},
-            onNavigateBack = {},
-        )
-    }
-}
-
-@Preview(name = "Payment - Empty - Dark", showBackground = true, showSystemUi = true)
-@Composable
-private fun PaymentScreenEmptyDarkPreview() {
-    LyraAppTheme(darkTheme = true) {
-        PaymentScreen(
-            state = PaymentUiState(plan = previewPlan),
-            onIntent = {},
-            onNavigateBack = {},
-        )
-    }
-}

@@ -39,20 +39,18 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.turkcell.lyraapp.data.membership.MembershipPlan
 import com.turkcell.lyraapp.ui.icons.LyraIcons
-import com.turkcell.lyraapp.ui.theme.LyraAppTheme
 
 @Composable
 fun PremiumRoute(
-    onNavigateToPayment: (planType: String) -> Unit,
-    onNavigateBack: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: PremiumViewModel = hiltViewModel(),
+    onNavigateBack: () -> Unit,
+    onNavigateToPayment: (planType: String) -> Unit,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -398,52 +396,3 @@ private fun PlanCard(
 }
 
 private fun formatPrice(priceLira: Int): String = "₺${priceLira},99"
-
-private val previewPlans = listOf(
-    MembershipPlan(
-        id = "recurring-monthly",
-        type = "recurring",
-        name = "Premium (Aylık Yenilenen)",
-        description = "Aylık otomatik yenilenen premium abonelik",
-        priceKurus = 5999,
-        priceLira = 59,
-        currency = "TRY",
-        durationDays = 30,
-        autoRenew = true,
-    ),
-    MembershipPlan(
-        id = "one-time-30",
-        type = "one-time",
-        name = "Premium (Tek Seferlik)",
-        description = "30 günlük tek seferlik premium erişim",
-        priceKurus = 7999,
-        priceLira = 79,
-        currency = "TRY",
-        durationDays = 30,
-        autoRenew = false,
-    ),
-)
-
-@Preview(name = "Premium - Dark", showBackground = true, showSystemUi = true)
-@Composable
-private fun PremiumScreenDarkPreview() {
-    LyraAppTheme(darkTheme = true) {
-        PremiumScreen(
-            state = PremiumUiState(plans = previewPlans),
-            onIntent = {},
-            onNavigateBack = {},
-        )
-    }
-}
-
-@Preview(name = "Premium - Light", showBackground = true, showSystemUi = true)
-@Composable
-private fun PremiumScreenLightPreview() {
-    LyraAppTheme(darkTheme = false) {
-        PremiumScreen(
-            state = PremiumUiState(plans = previewPlans),
-            onIntent = {},
-            onNavigateBack = {},
-        )
-    }
-}
