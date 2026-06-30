@@ -478,3 +478,45 @@
   tum online calma akisi `playback/next` uzerinden gecmek zorundadir. Offline calmada reklam uygulanmaz
   (yerel dosya dogrudan calinir). `recordPlay()` cagrisi kaldirildi cunku playback/next play'i
   otomatik kaydeder (cift kayit onlenir).
+
+### Çalma Listeleri — Gerçek API Entegrasyonu
+
+- Karar: Üç ayrı ekran-özel mock repository (`LibraryRepository`, `CreatePlaylistRepository`,
+  `PlaylistDetailRepository`) **tek paylaşılan `data/playlist/PlaylistRepository`** (Singleton,
+  `StateFlow<List<Playlist>>`) ile birleştirildi. Kütüphane, Yeni Çalma Listesi ve Playlist Detay
+  ekranları artık aynı repository'yi kullanır.
+
+- Son Güncelleme Tarihi: 30.06.2026
+
+- Uygulama:
+  - `data/remote/dto/PlaylistDto.kt` — `PlaylistDto`, `PlaylistWithSongsDto`, `CreatePlaylistBodyDto`,
+    `AddTrackBodyDto` vb. openapi.json şemalarıyla birebir eşleşir.
+  - `data/remote/PlaylistApiService.kt` — 6 endpoint: `GET/POST /me/playlists`,
+    `DELETE /me/playlists/{id}`, `POST /me/playlists/{id}/tracks`,
+    `DELETE /me/playlists/{id}/tracks/{songId}`, `GET /playlists/{id}` (detay + şarkılar, public).
+    Hata gövdesi okunabilmesi için create/delete/addTrack/removeTrack `Response<T>` döner
+    (checkout paterniyle aynı, bkz. `MembershipApiService`).
+  - `data/playlist/PlaylistRepository.kt` + `RealPlaylistRepository.kt` — `playlists: StateFlow<List<Playlist>>`
+    reaktiftir; oluşturma/silme sonrası iç state güncellenir, tüketiciler (Kütüphane) otomatik yenilenir,
+    manuel refetch gerekmez. `TrackAlreadyInPlaylistException` 409 durumunu (şarkı zaten ekli) ayırt eder.
+  - `data/playlist/MockPlaylistRepository.kt` — Preview/test için in-memory sahte veri.
+  - `di/PlaylistModule.kt` — `@Binds PlaylistRepository -> RealPlaylistRepository`; eski
+    `LibraryModule`, `CreatePlaylistModule`, `PlaylistDetailModule` ve mock-only repository'leri silindi.
+  - Ekran-özel UI modelleri (`LibraryPlaylist`, `AvailableSong`, `PlaylistDetail`, `PlaylistSong`) korundu;
+    ViewModel'ler bunları paylaşılan `Playlist`/`PlaylistWithTracks` domain modellerinden map eder.
+    Artwork gradyanları API'de yer almadığından mevcut `artworkColorsFor(id)` (`data/home/HomeModels.kt`)
+    yeniden kullanıldı.
+  - `Playlist` şeması şarkı sayısı döndürmediği için Kütüphane satırındaki "N şarkı" alt metni
+    kaldırıldı (uydurma veri yok, N+1 çağrı da yapılmaz). Playlist Detay'da şarkı sayısı/toplam süre
+    gerçek `songs[]` listesinden hesaplanır (gerçek veriden türetilen değer, uydurma değildir).
+  - "Herkese açık" toggle'ının (Yeni Çalma Listesi ekranı) API'de karşılığı yok; UI'da görsel olarak
+    korunur ancak `POST /me/playlists` isteğine dahil edilmez (kullanıcı onaylı karar).
+  - Playlist Detay'da sahiplik kontrolü: `PlaylistWithTracks.ownerId` ile `UserSessionManager.user.id`
+    karşılaştırılır; yalnızca sahip olunan playlist'lerde "Çıkar" ve "Şarkı ekle" aksiyonları gösterilir
+    (403'ü proaktif olarak önler). Şarkı ekleme `GET /api/v1/songs` kataloğunu listeleyen bir
+    `ModalBottomSheet` ile yapılır.
+
+- Sebep: Görev playlist listesinin oluşturma/silme sonrası otomatik güncellenmesini istiyordu; tek
+  Singleton + StateFlow deseni `PlaybackRepository`/`ThemePreferenceRepository` ile tutarlıdır
+  (bkz. "Paylaşılan Oynatma State'i"). `agents.md §2.2` gereği API'de olmayan alanlar (şarkı sayısı
+  listede, owner adı, herkese açıklık) client tarafında uydurulmadı.

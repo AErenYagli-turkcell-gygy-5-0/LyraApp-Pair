@@ -3,8 +3,8 @@ package com.turkcell.lyraapp.data.playlistdetail
 data class PlaylistDetail(
     val id: String,
     val title: String,
-    val description: String,
-    val ownerName: String,
+    val description: String?,
+    val isOwner: Boolean,
     val songCount: Int,
     val totalDuration: String,
     val artworkStartColor: Long,

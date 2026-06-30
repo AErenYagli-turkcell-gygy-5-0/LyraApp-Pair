@@ -18,17 +18,25 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -78,6 +86,15 @@ fun LibraryScreen(
     modifier: Modifier = Modifier,
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
 ) {
+    state.playlistPendingDelete?.let { playlist ->
+        DeleteConfirmDialog(
+            playlistTitle = playlist.title,
+            isDeleting = state.isDeleting,
+            onConfirm = { onIntent(LibraryIntent.DeleteConfirmed) },
+            onDismiss = { onIntent(LibraryIntent.DeleteDismissed) },
+        )
+    }
+
     Scaffold(
         modifier = modifier.fillMaxSize(),
         containerColor = MaterialTheme.colorScheme.background,
@@ -98,27 +115,40 @@ fun LibraryScreen(
             SortRow()
             Spacer(Modifier.height(8.dp))
 
-            if (state.isLoading && state.playlists.isEmpty()) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    CircularProgressIndicator()
+            when {
+                state.isLoading && state.playlists.isEmpty() -> {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        CircularProgressIndicator()
+                    }
                 }
-            } else {
-                LazyColumn(
-                    contentPadding = PaddingValues(bottom = 16.dp),
-                ) {
-                    items(state.playlists, key = { it.id }) { playlist ->
-                        PlaylistRow(
-                            playlist = playlist,
-                            onClick = {
-                                when {
-                                    playlist.isLikedSongs -> onIntent(LibraryIntent.OpenLikedSongs)
-                                    else -> onIntent(LibraryIntent.PlaylistClicked(playlist.id))
-                                }
-                            },
-                        )
+                state.errorMessage != null && state.playlists.isEmpty() -> {
+                    LibraryErrorState(
+                        message = state.errorMessage,
+                        onRetry = { onIntent(LibraryIntent.Retry) },
+                    )
+                }
+                state.playlists.isEmpty() -> {
+                    LibraryEmptyState()
+                }
+                else -> {
+                    LazyColumn(
+                        contentPadding = PaddingValues(bottom = 16.dp),
+                    ) {
+                        items(state.playlists, key = { it.id }) { playlist ->
+                            PlaylistRow(
+                                playlist = playlist,
+                                onClick = {
+                                    when {
+                                        playlist.isLikedSongs -> onIntent(LibraryIntent.OpenLikedSongs)
+                                        else -> onIntent(LibraryIntent.PlaylistClicked(playlist.id))
+                                    }
+                                },
+                                onDeleteClick = { onIntent(LibraryIntent.DeletePlaylistClicked(playlist)) },
+                            )
+                        }
                     }
                 }
             }
@@ -246,7 +276,10 @@ private fun SortRow() {
 private fun PlaylistRow(
     playlist: LibraryPlaylist,
     onClick: () -> Unit,
+    onDeleteClick: () -> Unit,
 ) {
+    var isMenuExpanded by remember { mutableStateOf(false) }
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -264,7 +297,7 @@ private fun PlaylistRow(
                 color = MaterialTheme.colorScheme.onSurface,
             )
             Text(
-                text = "Çalma listesi · ${playlist.songCount} şarkı",
+                text = "Çalma listesi",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -277,12 +310,28 @@ private fun PlaylistRow(
                 modifier = Modifier.size(20.dp),
             )
         } else {
-            Icon(
-                imageVector = LyraIcons.ArrowForward,
-                contentDescription = "Seçenekler",
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(20.dp),
-            )
+            Box {
+                IconButton(onClick = { isMenuExpanded = true }) {
+                    Icon(
+                        imageVector = LyraIcons.ArrowForward,
+                        contentDescription = "Seçenekler",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(20.dp),
+                    )
+                }
+                DropdownMenu(
+                    expanded = isMenuExpanded,
+                    onDismissRequest = { isMenuExpanded = false },
+                ) {
+                    DropdownMenuItem(
+                        text = { Text("Sil") },
+                        onClick = {
+                            isMenuExpanded = false
+                            onDeleteClick()
+                        },
+                    )
+                }
+            }
         }
     }
 }
@@ -314,3 +363,75 @@ private fun PlaylistArtwork(playlist: LibraryPlaylist) {
     }
 }
 
+@Composable
+private fun LibraryEmptyState() {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        Text(
+            text = "Henüz çalma listeniz yok",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+        Spacer(Modifier.height(8.dp))
+        Text(
+            text = "Sağ üstteki + ikonuyla yeni bir çalma listesi oluşturabilirsiniz.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+@Composable
+private fun LibraryErrorState(message: String, onRetry: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        Text(
+            text = message,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(Modifier.height(16.dp))
+        Button(onClick = onRetry) {
+            Text("Tekrar dene")
+        }
+    }
+}
+
+@Composable
+private fun DeleteConfirmDialog(
+    playlistTitle: String,
+    isDeleting: Boolean,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = { if (!isDeleting) onDismiss() },
+        title = { Text("Çalma listesini sil") },
+        text = { Text("\"$playlistTitle\" çalma listesini silmek istediğinize emin misiniz?") },
+        confirmButton = {
+            TextButton(onClick = onConfirm, enabled = !isDeleting) {
+                if (isDeleting) {
+                    CircularProgressIndicator(modifier = Modifier.size(16.dp))
+                } else {
+                    Text("Sil", color = MaterialTheme.colorScheme.error)
+                }
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss, enabled = !isDeleting) {
+                Text("Vazgeç")
+            }
+        },
+    )
+}

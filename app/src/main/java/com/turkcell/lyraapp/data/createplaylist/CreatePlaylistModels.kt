@@ -7,10 +7,3 @@ data class AvailableSong(
     val artworkStartColor: Long,
     val artworkEndColor: Long,
 )
-
-data class CreatePlaylistInput(
-    val name: String,
-    val description: String,
-    val isPublic: Boolean,
-    val selectedSongIds: List<String>,
-)

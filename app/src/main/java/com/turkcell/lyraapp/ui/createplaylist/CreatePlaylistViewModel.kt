@@ -2,8 +2,11 @@ package com.turkcell.lyraapp.ui.createplaylist
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.turkcell.lyraapp.data.createplaylist.CreatePlaylistInput
-import com.turkcell.lyraapp.data.createplaylist.CreatePlaylistRepository
+import com.turkcell.lyraapp.data.createplaylist.AvailableSong
+import com.turkcell.lyraapp.data.home.artworkColorsFor
+import com.turkcell.lyraapp.data.playlist.PlaylistRepository
+import com.turkcell.lyraapp.data.playlist.TrackAlreadyInPlaylistException
+import com.turkcell.lyraapp.data.remote.SongApiService
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
@@ -17,7 +20,8 @@ import javax.inject.Inject
 
 @HiltViewModel
 class CreatePlaylistViewModel @Inject constructor(
-    private val createPlaylistRepository: CreatePlaylistRepository,
+    private val playlistRepository: PlaylistRepository,
+    private val songApiService: SongApiService,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(CreatePlaylistUiState())
@@ -45,12 +49,23 @@ class CreatePlaylistViewModel @Inject constructor(
     private fun loadSongs() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
-            createPlaylistRepository.getAvailableSongs()
-                .onSuccess { songs ->
+            runCatching { songApiService.getSongs(limit = CATALOG_PAGE_SIZE) }
+                .onSuccess { response ->
+                    val songs = response.data.map { dto ->
+                        val (startColor, endColor) = artworkColorsFor(dto.id)
+                        AvailableSong(
+                            id = dto.id,
+                            title = dto.title,
+                            artist = dto.artist,
+                            artworkStartColor = startColor,
+                            artworkEndColor = endColor,
+                        )
+                    }
                     _uiState.update { it.copy(isLoading = false, availableSongs = songs) }
                 }
                 .onFailure {
                     _uiState.update { it.copy(isLoading = false) }
+                    _effect.send(CreatePlaylistEffect.ShowError("Şarkı kataloğu yüklenemedi."))
                 }
         }
     }
@@ -71,14 +86,21 @@ class CreatePlaylistViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isSaving = true) }
             val state = _uiState.value
-            val input = CreatePlaylistInput(
-                name = state.name,
-                description = state.description,
-                isPublic = state.isPublic,
-                selectedSongIds = state.selectedSongIds.toList(),
-            )
-            createPlaylistRepository.createPlaylist(input)
-                .onSuccess { _effect.send(CreatePlaylistEffect.Dismiss) }
+            val description = state.description.trim().ifBlank { null }
+
+            playlistRepository.createPlaylist(name = state.name.trim(), description = description)
+                .onSuccess { playlist ->
+                    val failedCount = addSelectedTracks(playlist.id, state.selectedSongIds)
+                    _uiState.update { it.copy(isSaving = false) }
+                    if (failedCount > 0) {
+                        _effect.send(
+                            CreatePlaylistEffect.ShowError(
+                                "Çalma listesi oluşturuldu ama $failedCount şarkı eklenemedi.",
+                            ),
+                        )
+                    }
+                    _effect.send(CreatePlaylistEffect.Dismiss)
+                }
                 .onFailure { error ->
                     _uiState.update { it.copy(isSaving = false) }
                     _effect.send(CreatePlaylistEffect.ShowError(error.message ?: "Çalma listesi kaydedilemedi."))
@@ -86,10 +108,25 @@ class CreatePlaylistViewModel @Inject constructor(
         }
     }
 
+    /** Seçili şarkıları sırayla ekler; 409 (zaten ekli) sessizce atlanır, diğer hatalar sayılır. */
+    private suspend fun addSelectedTracks(playlistId: String, songIds: Set<String>): Int {
+        var failedCount = 0
+        for (songId in songIds) {
+            playlistRepository.addTrack(playlistId, songId).onFailure { error ->
+                if (error !is TrackAlreadyInPlaylistException) failedCount++
+            }
+        }
+        return failedCount
+    }
+
     private fun updateForm(transform: (CreatePlaylistUiState) -> CreatePlaylistUiState) {
         _uiState.update { current ->
             val updated = transform(current)
-            updated.copy(isSaveEnabled = updated.name.isNotBlank() || updated.selectedSongIds.isNotEmpty())
+            updated.copy(isSaveEnabled = updated.name.isNotBlank())
         }
+    }
+
+    private companion object {
+        const val CATALOG_PAGE_SIZE = 50
     }
 }

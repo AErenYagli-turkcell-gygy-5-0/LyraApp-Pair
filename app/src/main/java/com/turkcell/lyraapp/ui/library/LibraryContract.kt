@@ -7,8 +7,11 @@ import com.turkcell.lyraapp.data.library.LibraryPlaylist
  */
 data class LibraryUiState(
     val isLoading: Boolean = false,
+    val errorMessage: String? = null,
     val selectedTab: LibraryTab = LibraryTab.Playlists,
     val playlists: List<LibraryPlaylist> = emptyList(),
+    val playlistPendingDelete: LibraryPlaylist? = null,
+    val isDeleting: Boolean = false,
 )
 
 enum class LibraryTab(val label: String) {
@@ -22,6 +25,10 @@ sealed interface LibraryIntent {
     data object OpenLikedSongs : LibraryIntent
     data class PlaylistClicked(val playlistId: String) : LibraryIntent
     data object CreatePlaylistClicked : LibraryIntent
+    data object Retry : LibraryIntent
+    data class DeletePlaylistClicked(val playlist: LibraryPlaylist) : LibraryIntent
+    data object DeleteConfirmed : LibraryIntent
+    data object DeleteDismissed : LibraryIntent
 }
 
 sealed interface LibraryEffect {
